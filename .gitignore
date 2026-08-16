@@ -1,0 +1,24 @@
+#dependencies
+node_modules/
+.pnp
+.pnp.js
+
+#Expo
+.expo/
+dist/
+web-build/
+
+#Misc
+.DS_Store
+*.pem
+
+#Local env files
+.env
+.env.local
+.env.development.local
+.env.production.local
+
+#Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
