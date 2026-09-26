@@ -81,6 +81,12 @@ export default function PerfilSidebar({ visivel, onFechar, email, userId }) {
                 <Feather name="chevron-right" size={18} color={theme.colors.border} />
               </TouchableOpacity>
 
+              <TouchableOpacity style={styles.item} onPress={() => irPara('/termos-privacidade')}>
+                <View style={styles.itemIcon}><Feather name="file-text" size={18} color={theme.colors.text} /></View>
+                <Text style={styles.itemText}>Termos e Privacidade</Text>
+                <Feather name="chevron-right" size={18} color={theme.colors.border} />
+              </TouchableOpacity>
+
               <View style={styles.divider} />
 
               <TouchableOpacity style={styles.item} onPress={sair}>

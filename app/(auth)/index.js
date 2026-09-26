@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, Platform, ActivityIndicator, ScrollView, Image } from 'react-native';
+import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { supabase } from '../../supabase';
@@ -18,6 +19,7 @@ const LIMITE_TENTATIVAS = 5;
 const ESPERA_APOS_LIMITE_MS = 30000;
 
 export default function AuthScreen() {
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [modoRecuperarSenha, setModoRecuperarSenha] = useState(false);
   const [userType, setUserType] = useState('voluntario');
@@ -296,6 +298,16 @@ export default function AuthScreen() {
         )}
       </View>
 
+      {!isLogin && (
+        <Text style={styles.termsText}>
+          Ao se cadastrar, você concorda com nossos{' '}
+          <Text style={styles.termsLink} onPress={() => router.push('/termos-privacidade')}>
+            Termos de Uso e Política de Privacidade
+          </Text>
+          .
+        </Text>
+      )}
+
       <Text style={styles.footerText}>Ou use suas redes sociais:</Text>
       <View style={styles.socialRow}>
         <TouchableOpacity
@@ -416,11 +428,24 @@ const styles = StyleSheet.create({
     color: theme.colors.text, 
     fontFamily: theme.fonts.button 
   },
-  footerText: { 
-    fontSize: 12, 
-    color: theme.colors.textLight, 
+  footerText: {
+    fontSize: 12,
+    color: theme.colors.textLight,
     marginBottom: 15,
-    fontFamily: theme.fonts.body 
+    fontFamily: theme.fonts.body
+  },
+  termsText: {
+    fontSize: 11.5,
+    color: theme.colors.textLight,
+    fontFamily: theme.fonts.body,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 17,
+    paddingHorizontal: 10,
+  },
+  termsLink: {
+    color: theme.colors.secondary,
+    fontFamily: theme.fonts.button,
   },
   socialRow: { 
     flexDirection: 'row', 

@@ -6,7 +6,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "author": "",
   "license": "ISC",
@@ -39,5 +41,16 @@
     "react-native-url-polyfill": "^4.0.0",
     "react-native-web": "^0.21.2",
     "react-native-webview": "13.13.5"
+  },
+  "devDependencies": {
+    "babel-jest": "^30.5.2",
+    "jest": "^30.5.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/.expo/"
+    ]
   }
 }

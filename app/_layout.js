@@ -46,6 +46,10 @@ function RootNavigator() {
         <Stack.Screen name="sobre" />
         <Stack.Screen name="reclamacoes" />
       </Stack.Protected>
+
+      {/* Sem guard de propósito: precisa abrir tanto no cadastro (antes de
+          existir sessão) quanto depois, a partir do menu de configurações. */}
+      <Stack.Screen name="termos-privacidade" />
     </Stack>
   );
 }
