@@ -59,6 +59,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: Platform.OS === 'web' ? AsyncStorage : new ArmazenamentoSeguroDaSessao(),
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // No nativo (iOS/Android) o retorno do login com Google é tratado à mão
+    // em app/(auth)/index.js (WebBrowser + setSession), então isso fica
+    // desligado lá. No Web, o Google redireciona o próprio navegador de
+    // volta pra cá com o token dentro da URL — sem detectSessionInUrl
+    // ligado, o Supabase nunca lê esse token e a sessão nunca é criada,
+    // mesmo com o login no Google tendo funcionado (era o bug: o app
+    // voltava pra tela de login como se nada tivesse acontecido).
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });

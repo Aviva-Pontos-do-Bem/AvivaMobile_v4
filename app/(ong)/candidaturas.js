@@ -11,6 +11,7 @@ import { theme } from '../../lib/theme';
 const FILTROS = [
   { key: 'pendente', label: 'Pendentes' },
   { key: 'aceito', label: 'Aceitos' },
+  { key: 'concluido', label: 'Concluídos' },
   { key: 'recusado', label: 'Recusados' },
   { key: 'todos', label: 'Todos' },
 ];
@@ -57,7 +58,7 @@ export default function GerenciarCandidaturas() {
   }, [lista, filtro]);
 
   const contagens = useMemo(() => {
-    const c = { pendente: 0, aceito: 0, recusado: 0 };
+    const c = { pendente: 0, aceito: 0, concluido: 0, recusado: 0 };
     lista.forEach((item) => { if (c[item.status] != null) c[item.status] += 1; });
     return c;
   }, [lista]);
@@ -131,11 +132,30 @@ export default function GerenciarCandidaturas() {
                     <Text style={styles.rejectText}>Recusar</Text>
                   </TouchableOpacity>
                 </View>
+              ) : item.status === 'aceito' ? (
+                <View style={{ gap: 10 }}>
+                  <View style={[styles.statusBadge, styles.statusAceito]}>
+                    <Text style={[styles.statusText, styles.statusTextAceito]}>Voluntário Aprovado ✓</Text>
+                  </View>
+                  <TouchableOpacity style={styles.completeBtn} disabled={atualizandoId === item.id} onPress={() => atualizarStatus(item.id, 'concluido')}>
+                    {atualizandoId === item.id ? (
+                      <ActivityIndicator size="small" color={theme.colors.background} />
+                    ) : (
+                      <>
+                        <Feather name="award" size={16} color={theme.colors.background} />
+                        <Text style={styles.completeText}>Marcar ação como concluída</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ) : item.status === 'concluido' ? (
+                <View style={[styles.statusBadge, styles.statusConcluido]}>
+                  <Feather name="award" size={14} color={theme.colors.primary} />
+                  <Text style={[styles.statusText, styles.statusTextConcluido]}>Ação Concluída</Text>
+                </View>
               ) : (
-                <View style={[styles.statusBadge, item.status === 'aceito' ? styles.statusAceito : styles.statusRecusado]}>
-                  <Text style={[styles.statusText, item.status === 'aceito' ? styles.statusTextAceito : styles.statusTextRecusado]}>
-                    {item.status === 'aceito' ? 'Voluntário Aprovado ✓' : 'Candidatura Recusada'}
-                  </Text>
+                <View style={[styles.statusBadge, styles.statusRecusado]}>
+                  <Text style={[styles.statusText, styles.statusTextRecusado]}>Candidatura Recusada</Text>
                 </View>
               )}
             </View>
@@ -183,10 +203,15 @@ const styles = StyleSheet.create({
   rejectBtn: { flex: 1, flexDirection: 'row', gap: 8, backgroundColor: theme.colors.background, borderWidth: 1.5, borderColor: theme.colors.error, paddingVertical: 12, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   rejectText: { color: theme.colors.error, fontFamily: theme.fonts.button, fontSize: 13.5 },
 
-  statusBadge: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12, alignItems: 'center', marginTop: 4 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12, marginTop: 4 },
   statusAceito: { backgroundColor: theme.colors.successLight },
   statusRecusado: { backgroundColor: theme.colors.errorLight },
+  statusConcluido: { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
   statusText: { fontSize: 13, fontFamily: theme.fonts.button },
   statusTextAceito: { color: theme.colors.success },
   statusTextRecusado: { color: theme.colors.error },
+  statusTextConcluido: { color: theme.colors.primary },
+
+  completeBtn: { flexDirection: 'row', gap: 8, backgroundColor: theme.colors.primary, paddingVertical: 12, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  completeText: { color: theme.colors.background, fontFamily: theme.fonts.button, fontSize: 13.5 },
 });

@@ -39,7 +39,7 @@ export default function DetalheVaga() {
       setLoading(true);
       const { data: vagaData, error: vagaError } = await supabase
         .from('vagas')
-        .select('id, titulo, descricao, categoria, localizacao, endereco, imagem_url, data_hora, vagas_disponiveis, idade_minima, requisitos, o_que_levar, contato_emergencia, profiles ( id, full_name, foto_url, verificado, bio )')
+        .select('id, titulo, descricao, categoria, modalidade, localizacao, endereco, imagem_url, data_hora, vagas_disponiveis, idade_minima, requisitos, o_que_levar, contato_emergencia, profiles ( id, full_name, foto_url, verificado, bio )')
         .eq('id', id)
         .single();
 
@@ -126,8 +126,11 @@ export default function DetalheVaga() {
               </View>
             )}
             <View style={styles.infoRow}>
-              <View style={styles.iconBox}><Feather name="map-pin" size={18} color={theme.colors.primary} /></View>
-              <Text style={styles.infoText}>{vaga.endereco || vaga.localizacao || 'Local a combinar'}</Text>
+              <View style={styles.iconBox}><Feather name={vaga.modalidade === 'remoto' ? 'wifi' : 'map-pin'} size={18} color={theme.colors.primary} /></View>
+              <Text style={styles.infoText}>
+                {vaga.modalidade === 'remoto' ? 'Remoto' : vaga.modalidade === 'hibrido' ? 'Híbrido' : 'Presencial'}
+                {vaga.modalidade !== 'remoto' ? ` · ${vaga.endereco || vaga.localizacao || 'Local a combinar'}` : ''}
+              </Text>
             </View>
             {vaga.vagas_disponiveis != null && (
               <View style={styles.infoRow}>

@@ -19,8 +19,13 @@ export function AuthProvider({ children }) {
       setProfile(null);
       return;
     }
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-    setProfile(data || null);
+    // Usa a função meu_perfil() (RPC) em vez de .from('profiles').select('*')
+    // direto: telefone/documento agora têm SELECT revogado por coluna para
+    // qualquer usuário (ver migration_seguranca_rls.sql) — só essa função,
+    // que roda como o dono dela (SECURITY DEFINER), ainda enxerga essas
+    // colunas, e só devolve a linha do próprio usuário logado.
+    const { data } = await supabase.rpc('meu_perfil');
+    setProfile(data?.[0] || null);
   }, []);
 
   useEffect(() => {

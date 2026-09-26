@@ -30,7 +30,11 @@ export default function PerfilPublicoView({ userId }) {
   const [sidebarAberta, setSidebarAberta] = useState(false);
 
   const carregar = useCallback(async () => {
-    const { data: perfilData } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    // Usa a função perfil_publico() (RPC) em vez de .from('profiles').select('*')
+    // direto: ela já cuida de esconder telefone/CNPJ quando quem está vendo
+    // não é o dono do perfil E o perfil é de um voluntário (pessoa física) —
+    // ver migration_seguranca_rls.sql para o motivo.
+    const { data: perfilData } = await supabase.rpc('perfil_publico', { perfil_id: userId }).maybeSingle();
     setPerfil(perfilData);
 
     const [{ count: seguidoresCount }, { count: seguindoCount }, { count: postsCount }] = await Promise.all([

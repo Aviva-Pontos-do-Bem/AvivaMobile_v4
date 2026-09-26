@@ -30,17 +30,17 @@ export default function BuscarEmpresa() {
 
   const carregar = useCallback(async () => {
     setCarregando(true);
-    const [{ data: vagasData }, { data: ongsData }, { data: seguindoData }] = await Promise.all([
+    const [{ data: vagasData }, { data: ongsData }, { data: apoiadasData }] = await Promise.all([
       supabase
         .from('vagas')
         .select('id, titulo, categoria, endereco, localizacao, vagas_disponiveis, ong_id, profiles ( id, full_name, foto_url, verificado )')
         .eq('ativa', true)
         .order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, full_name, foto_url, bio, endereco, verificado').eq('user_type', 'ong'),
-      supabase.from('seguidores').select('seguido_id').eq('seguidor_id', session.user.id),
+      supabase.from('patrocinios').select('ong_id').eq('empresa_id', session.user.id),
     ]);
 
-    const idsSeguindo = new Set((seguindoData || []).map((s) => s.seguido_id));
+    const idsApoiados = new Set((apoiadasData || []).map((p) => p.ong_id));
     const vagasPorOng = new Map();
     (vagasData || []).forEach((v) => vagasPorOng.set(v.ong_id, (vagasPorOng.get(v.ong_id) || 0) + 1));
 
@@ -48,7 +48,7 @@ export default function BuscarEmpresa() {
     setOngs(
       (ongsData || []).map((o) => ({
         ...o,
-        jaSegue: idsSeguindo.has(o.id),
+        jaApoia: idsApoiados.has(o.id),
         vagasAbertasCount: vagasPorOng.get(o.id) || 0,
       }))
     );
@@ -106,7 +106,7 @@ export default function BuscarEmpresa() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 4 }}>
               {sugestoesFiltradas.map(({ ong, match }) => (
-                <OngSuggestionCard key={ong.id} ong={ong} match={match} categoria={ong.vagasAbertasCount > 0 ? `${ong.vagasAbertasCount} vaga(s) aberta(s)` : null} />
+                <OngSuggestionCard key={ong.id} ong={ong} match={match} categoria={ong.vagasAbertasCount > 0 ? `${ong.vagasAbertasCount} vaga(s) aberta(s)` : null} modo="patrocinar" />
               ))}
             </ScrollView>
           )}

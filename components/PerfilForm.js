@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -22,6 +22,7 @@ export default function PerfilForm() {
   const { session, profile, userType, refreshProfile } = useAuth();
   const router = useRouter();
   const isOrganizacao = userType === 'ong' || userType === 'empresa';
+  const isVoluntario = userType === 'voluntario';
 
   const [fotoUrl, setFotoUrl] = useState(profile?.foto_url || '');
   const [fullName, setFullName] = useState(profile?.full_name || '');
@@ -36,6 +37,48 @@ export default function PerfilForm() {
   const [chavePix, setChavePix] = useState(profile?.chave_pix || '');
   const [mensagemDoacao, setMensagemDoacao] = useState(profile?.mensagem_doacao || '');
   const [salvando, setSalvando] = useState(false);
+
+  // Vínculo funcionário -> empresa: alimenta o Dashboard ESG da empresa
+  // (horas de voluntariado dos funcionários). Guardamos o id e o nome
+  // escolhido separadamente porque profiles.empresa_id só tem o id — o nome
+  // vem de uma consulta extra na primeira renderização.
+  const [empresaId, setEmpresaId] = useState(profile?.empresa_id || null);
+  const [empresaNome, setEmpresaNome] = useState('');
+  const [buscaEmpresa, setBuscaEmpresa] = useState('');
+  const [empresasEncontradas, setEmpresasEncontradas] = useState([]);
+  const [buscandoEmpresa, setBuscandoEmpresa] = useState(false);
+
+  useEffect(() => {
+    if (!isVoluntario || !profile?.empresa_id) return;
+    supabase.from('profiles').select('full_name').eq('id', profile.empresa_id).maybeSingle()
+      .then(({ data }) => { if (data) setEmpresaNome(data.full_name); });
+  }, [isVoluntario, profile?.empresa_id]);
+
+  const buscarEmpresas = useCallback(async (texto) => {
+    setBuscaEmpresa(texto);
+    if (!texto.trim()) { setEmpresasEncontradas([]); return; }
+    setBuscandoEmpresa(true);
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('user_type', 'empresa')
+      .ilike('full_name', `%${texto.trim()}%`)
+      .limit(5);
+    setEmpresasEncontradas(data || []);
+    setBuscandoEmpresa(false);
+  }, []);
+
+  function selecionarEmpresa(empresa) {
+    setEmpresaId(empresa.id);
+    setEmpresaNome(empresa.full_name);
+    setBuscaEmpresa('');
+    setEmpresasEncontradas([]);
+  }
+
+  function removerVinculoEmpresa() {
+    setEmpresaId(null);
+    setEmpresaNome('');
+  }
 
   // Usada principalmente por ONGs: sem essas coordenadas, a organização não
   // aparece na busca "ONGs perto de você" de voluntários/empresas — a busca
@@ -107,6 +150,7 @@ export default function PerfilForm() {
       aceita_doacoes: isOng ? aceitaDoacoes : false,
       chave_pix: isOng && aceitaDoacoes ? chavePix.trim() : null,
       mensagem_doacao: isOng && aceitaDoacoes ? mensagemDoacao.trim() || null : null,
+      ...(isVoluntario ? { empresa_id: empresaId } : null),
     }).eq('id', session.user.id);
 
     const { error: erroAuth } = await supabase.auth.updateUser({ data: { full_name: fullName.trim() } });
@@ -141,6 +185,45 @@ export default function PerfilForm() {
 
       <Text style={styles.label}>Telefone</Text>
       <TextInput style={styles.input} value={telefone} onChangeText={(t) => setTelefone(formatarTelefoneBR(t))} placeholder="(11) 90000-0000" keyboardType="phone-pad" placeholderTextColor={theme.colors.textLight} />
+
+      {isVoluntario && (
+        <>
+          <Text style={styles.label}>Empresa onde você trabalha (opcional)</Text>
+          <Text style={styles.locationHint}>
+            Vincular sua empresa faz suas ações concluídas contarem no painel ESG dela.
+          </Text>
+
+          {empresaId ? (
+            <View style={styles.empresaSelecionadaRow}>
+              <Feather name="briefcase" size={16} color={theme.colors.secondary} />
+              <Text style={styles.empresaSelecionadaText} numberOfLines={1}>{empresaNome || 'Empresa vinculada'}</Text>
+              <TouchableOpacity onPress={removerVinculoEmpresa}>
+                <Feather name="x-circle" size={18} color={theme.colors.error} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <TextInput
+                style={styles.input}
+                value={buscaEmpresa}
+                onChangeText={buscarEmpresas}
+                placeholder="Digite o nome da empresa"
+                placeholderTextColor={theme.colors.textLight}
+              />
+              {buscandoEmpresa && <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginTop: 8 }} />}
+              {empresasEncontradas.map((empresa) => (
+                <TouchableOpacity key={empresa.id} style={styles.empresaResultRow} onPress={() => selecionarEmpresa(empresa)}>
+                  <Feather name="briefcase" size={14} color={theme.colors.textLight} />
+                  <Text style={styles.empresaResultText}>{empresa.full_name}</Text>
+                </TouchableOpacity>
+              ))}
+              {!buscandoEmpresa && buscaEmpresa.trim() && empresasEncontradas.length === 0 && (
+                <Text style={styles.locationHint}>Nenhuma empresa encontrada com esse nome.</Text>
+              )}
+            </>
+          )}
+        </>
+      )}
 
       {isOrganizacao && (
         <>
@@ -228,6 +311,10 @@ const styles = StyleSheet.create({
   locationBtnText: { fontFamily: theme.fonts.button, fontSize: 13, color: theme.colors.secondary },
   locationHint: { fontFamily: theme.fonts.body, fontSize: 11.5, color: theme.colors.textLight, marginTop: 6, lineHeight: 16 },
   clearLocationText: { fontFamily: theme.fonts.button, fontSize: 12, color: theme.colors.error },
+  empresaSelecionadaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: theme.colors.successLight, borderRadius: 14, padding: 14 },
+  empresaSelecionadaText: { flex: 1, fontFamily: theme.fonts.button, fontSize: 13.5, color: theme.colors.text },
+  empresaResultRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: theme.colors.surface, borderRadius: 10, marginTop: 6 },
+  empresaResultText: { fontFamily: theme.fonts.body, fontSize: 13, color: theme.colors.text },
   donationToggleRow: { flexDirection: 'row', alignItems: 'center', marginTop: 24, gap: 12 },
   donationToggleTitle: { fontFamily: theme.fonts.button, fontSize: 14, color: theme.colors.text },
   donationToggleSub: { fontFamily: theme.fonts.body, fontSize: 11.5, color: theme.colors.textLight, marginTop: 2 },

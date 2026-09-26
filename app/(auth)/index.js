@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, Platform, ActivityIndicator, ScrollView, Image } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { supabase } from '../../supabase';
 import { theme } from '../../lib/theme';
 import { validarEmail, validarCNPJ, validarSenhaForte } from '../../lib/validation';
+
+// Necessário no Web para o navegador voltar o controle pro app depois do
+// popup de login do Google fechar (não faz nada em iOS/Android).
+WebBrowser.maybeCompleteAuthSession();
 
 // Freia tentativas de login repetidas direto no aparelho: depois de 5 erros
 // seguidos, obriga a pessoa a esperar um pouco antes de tentar de novo. Não
@@ -22,6 +28,7 @@ export default function AuthScreen() {
   const [documento, setDocumento] = useState('');
 
   const [loading, setLoading] = useState(false);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [tentativasFalhas, setTentativasFalhas] = useState(0);
   const [bloqueadoAte, setBloqueadoAte] = useState(0);
 
@@ -92,6 +99,53 @@ export default function AuthScreen() {
       setIsLogin(true);
     }
     setLoading(false);
+  }
+
+  // Fluxo OAuth do Supabase para apps nativos: pedimos a URL de login com
+  // skipBrowserRedirect (o Supabase não redireciona sozinho, só devolve a
+  // URL), abrimos ela numa aba de navegador controlada pelo próprio app
+  // (WebBrowser.openAuthSessionAsync) e, quando o Google devolve o controle
+  // pro nosso esquema de URL ("aviva://"), extraímos o access/refresh token
+  // do fragmento da URL e criamos a sessão manualmente. No Web, o Supabase
+  // já sabe redirecionar sozinho, então não precisamos do WebBrowser.
+  async function handleGoogleLogin() {
+    setLoadingGoogle(true);
+    try {
+      if (Platform.OS === 'web') {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined },
+        });
+        if (error) throw error;
+        return;
+      }
+
+      const redirectUrl = Linking.createURL('');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
+      });
+      if (error) throw error;
+
+      const resultado = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+      if (resultado.type !== 'success' || !resultado.url) return;
+
+      const parteComTokens = resultado.url.includes('#') ? resultado.url.split('#')[1] : resultado.url.split('?')[1];
+      const params = new URLSearchParams(parteComTokens || '');
+      const errorDescription = params.get('error_description');
+      if (errorDescription) throw new Error(errorDescription);
+
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      if (!access_token || !refresh_token) throw new Error('Não foi possível concluir o login com Google.');
+
+      const { error: erroSessao } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (erroSessao) throw erroSessao;
+    } catch (err) {
+      mostrarAlerta('Erro ao entrar com Google', err.message || 'Tente novamente.');
+    } finally {
+      setLoadingGoogle(false);
+    }
   }
 
   async function handleRecuperarSenha() {
@@ -244,9 +298,21 @@ export default function AuthScreen() {
 
       <Text style={styles.footerText}>Ou use suas redes sociais:</Text>
       <View style={styles.socialRow}>
-        <View style={[styles.socialIcon, { backgroundColor: '#3b5998' }]}><Text style={styles.siText}>f</Text></View>
-        <View style={[styles.socialIcon, { backgroundColor: '#db4a39' }]}><Text style={styles.siText}>G</Text></View>
-        <View style={[styles.socialIcon, { backgroundColor: '#0077b5' }]}><Text style={styles.siText}>in</Text></View>
+        <TouchableOpacity
+          style={[styles.socialIcon, { backgroundColor: '#3b5998', opacity: 0.5 }]}
+          onPress={() => mostrarAlerta('Em breve', 'Login com Facebook ainda não está disponível.')}
+        >
+          <Text style={styles.siText}>f</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.socialIcon, { backgroundColor: '#db4a39' }]} onPress={handleGoogleLogin} disabled={loadingGoogle}>
+          {loadingGoogle ? <ActivityIndicator size="small" color={theme.colors.background} /> : <Text style={styles.siText}>G</Text>}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.socialIcon, { backgroundColor: '#0077b5', opacity: 0.5 }]}
+          onPress={() => mostrarAlerta('Em breve', 'Login com LinkedIn ainda não está disponível.')}
+        >
+          <Text style={styles.siText}>in</Text>
+        </TouchableOpacity>
       </View>
       </>
       )}

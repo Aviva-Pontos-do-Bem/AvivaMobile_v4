@@ -20,6 +20,13 @@ function RootNavigator() {
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
 
+      {/* Quem entra pela primeira vez via Google não tem user_type (isso só
+          existe hoje via user_metadata do cadastro por e-mail) — precisa
+          escolher o perfil antes de cair em qualquer área protegida. */}
+      <Stack.Protected guard={!!session && !userType}>
+        <Stack.Screen name="completar-perfil" />
+      </Stack.Protected>
+
       <Stack.Protected guard={!!session && userType === 'voluntario'}>
         <Stack.Screen name="(voluntario)" />
       </Stack.Protected>

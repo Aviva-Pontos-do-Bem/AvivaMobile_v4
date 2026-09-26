@@ -9,7 +9,15 @@ import OngSuggestionCard from '../../components/OngSuggestionCard';
 import RankingImpacto from '../../components/RankingImpacto';
 import NearbyOngsButton from '../../components/NearbyOngsButton';
 import { calcularMatch } from '../../lib/matching';
+import { CATEGORIAS } from '../../lib/constants';
 import { theme } from '../../lib/theme';
+
+const MODALIDADES = [
+  { key: 'todas', label: 'Todas' },
+  { key: 'presencial', label: 'Presencial' },
+  { key: 'remoto', label: 'Remoto' },
+  { key: 'hibrido', label: 'H\u00edbrido' },
+];
 
 function normalizar(texto) {
   return (texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -20,6 +28,8 @@ export default function Buscar() {
   const { session, profile } = useAuth();
 
   const [query, setQuery] = useState('');
+  const [categoriaFiltro, setCategoriaFiltro] = useState('todas');
+  const [modalidadeFiltro, setModalidadeFiltro] = useState('todas');
   const [carregando, setCarregando] = useState(true);
   const [vagas, setVagas] = useState([]);
   const [ongs, setOngs] = useState([]);
@@ -29,7 +39,7 @@ export default function Buscar() {
     const [{ data: vagasData }, { data: ongsData }, { data: seguindoData }] = await Promise.all([
       supabase
         .from('vagas')
-        .select('id, titulo, categoria, endereco, localizacao, vagas_disponiveis, ong_id, profiles ( id, full_name, foto_url, verificado )')
+        .select('id, titulo, categoria, modalidade, endereco, localizacao, vagas_disponiveis, ong_id, profiles ( id, full_name, foto_url, verificado )')
         .eq('ativa', true)
         .order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, full_name, foto_url, bio, endereco, verificado').eq('user_type', 'ong'),
@@ -56,14 +66,18 @@ export default function Buscar() {
   const termo = normalizar(query);
 
   const vagasFiltradas = useMemo(() => {
-    if (!termo) return vagas;
-    return vagas.filter((v) =>
-      normalizar(v.titulo).includes(termo) ||
-      normalizar(v.categoria).includes(termo) ||
-      normalizar(v.endereco || v.localizacao).includes(termo) ||
-      normalizar(v.profiles?.full_name).includes(termo)
-    );
-  }, [vagas, termo]);
+    return vagas.filter((v) => {
+      if (categoriaFiltro !== 'todas' && v.categoria !== categoriaFiltro) return false;
+      if (modalidadeFiltro !== 'todas' && (v.modalidade || 'presencial') !== modalidadeFiltro) return false;
+      if (!termo) return true;
+      return (
+        normalizar(v.titulo).includes(termo) ||
+        normalizar(v.categoria).includes(termo) ||
+        normalizar(v.endereco || v.localizacao).includes(termo) ||
+        normalizar(v.profiles?.full_name).includes(termo)
+      );
+    });
+  }, [vagas, termo, categoriaFiltro, modalidadeFiltro]);
 
   const ongsComMatch = useMemo(() => {
     return ongs
@@ -88,6 +102,25 @@ export default function Buscar() {
           <NearbyOngsButton />
         </View>
       </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar} contentContainerStyle={styles.filterBarContent}>
+        <TouchableOpacity style={[styles.filterChip, categoriaFiltro === 'todas' && styles.filterChipActive]} onPress={() => setCategoriaFiltro('todas')}>
+          <Text style={[styles.filterChipText, categoriaFiltro === 'todas' && styles.filterChipTextActive]}>Todas as causas</Text>
+        </TouchableOpacity>
+        {CATEGORIAS.map((c) => (
+          <TouchableOpacity key={c} style={[styles.filterChip, categoriaFiltro === c && styles.filterChipActive]} onPress={() => setCategoriaFiltro(categoriaFiltro === c ? 'todas' : c)}>
+            <Text style={[styles.filterChipText, categoriaFiltro === c && styles.filterChipTextActive]}>{c}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterBar} contentContainerStyle={styles.filterBarContent}>
+        {MODALIDADES.map((m) => (
+          <TouchableOpacity key={m.key} style={[styles.filterChip, styles.filterChipModalidade, modalidadeFiltro === m.key && styles.filterChipActive]} onPress={() => setModalidadeFiltro(m.key)}>
+            <Text style={[styles.filterChipText, modalidadeFiltro === m.key && styles.filterChipTextActive]}>{m.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {carregando ? (
         <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
@@ -123,7 +156,7 @@ export default function Buscar() {
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.vagaTitulo} numberOfLines={1}>{item.titulo}</Text>
                   <Text style={styles.vagaMeta} numberOfLines={1}>
-                    {item.profiles?.full_name} · {item.categoria} · {item.vagas_disponiveis ?? '—'} vagas
+                    {item.profiles?.full_name} · {item.categoria} · {MODALIDADES.find((m) => m.key === (item.modalidade || 'presencial'))?.label} · {item.vagas_disponiveis ?? '—'} vagas
                   </Text>
                 </View>
                 <TouchableOpacity style={styles.candidatarBtn} onPress={() => router.push(`/vaga/${item.id}`)}>
@@ -146,6 +179,14 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 50, paddingBottom: 20, backgroundColor: theme.colors.background, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   title: { fontSize: 24, fontFamily: theme.fonts.heading, color: theme.colors.text },
   subtitle: { fontSize: 13, fontFamily: theme.fonts.body, color: theme.colors.textLight, marginTop: 2, marginBottom: 16 },
+
+  filterBar: { backgroundColor: theme.colors.background, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  filterBarContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  filterChip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 100, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
+  filterChipModalidade: { paddingVertical: 6 },
+  filterChipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  filterChipText: { fontSize: 12, fontFamily: theme.fonts.button, color: theme.colors.textLight },
+  filterChipTextActive: { color: theme.colors.background },
 
   content: { padding: 16, paddingBottom: 30 },
   sectionTitle: { fontSize: 16, fontFamily: theme.fonts.heading, color: theme.colors.text, marginBottom: 12 },

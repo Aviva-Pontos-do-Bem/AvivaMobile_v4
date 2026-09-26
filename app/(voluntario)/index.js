@@ -24,7 +24,7 @@ export default function VoluntarioHome() {
     const { data, error } = await supabase
       .from('vagas')
       .select(
-        'id, titulo, descricao, categoria, localizacao, endereco, imagem_url, data_hora, vagas_disponiveis, created_at, profiles ( id, full_name, foto_url, verificado )'
+        'id, titulo, descricao, categoria, modalidade, localizacao, endereco, imagem_url, data_hora, vagas_disponiveis, created_at, profiles ( id, full_name, foto_url, verificado )'
       )
       .eq('ativa', true)
       .order('created_at', { ascending: false });
@@ -78,6 +78,11 @@ export default function VoluntarioHome() {
             {!!item.categoria && (
               <View style={styles.categoryTag}>
                 <Text style={styles.categoryText}>{item.categoria}</Text>
+              </View>
+            )}
+            {!!item.modalidade && item.modalidade !== 'presencial' && (
+              <View style={styles.categoryTag}>
+                <Text style={styles.categoryText}>{item.modalidade === 'remoto' ? 'Remoto' : 'Híbrido'}</Text>
               </View>
             )}
             {item.vagas_disponiveis != null && (

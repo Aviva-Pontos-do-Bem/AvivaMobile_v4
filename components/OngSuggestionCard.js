@@ -19,18 +19,21 @@ const avisar = (titulo, mensagem) => {
 // "Conectar-se" reaproveita a tabela seguidores que já existe no app (a
 // mesma usada no botão "Seguir" do perfil público), então uma conexão feita
 // aqui já aparece lá, e vice-versa.
-export default function OngSuggestionCard({ ong, match, categoria }) {
+export default function OngSuggestionCard({ ong, match, categoria, modo = 'seguir' }) {
   const router = useRouter();
   const { session } = useAuth();
-  const [jaConectado, setJaConectado] = useState(!!ong.jaSegue);
+  const ehPatrocinio = modo === 'patrocinar';
+  const [jaConectado, setJaConectado] = useState(ehPatrocinio ? !!ong.jaApoia : !!ong.jaSegue);
   const [conectando, setConectando] = useState(false);
 
   async function conectar() {
     if (jaConectado || conectando) return;
     setConectando(true);
-    const { error } = await supabase.from('seguidores').insert({ seguidor_id: session.user.id, seguido_id: ong.id });
+    const { error } = ehPatrocinio
+      ? await supabase.from('patrocinios').insert({ empresa_id: session.user.id, ong_id: ong.id })
+      : await supabase.from('seguidores').insert({ seguidor_id: session.user.id, seguido_id: ong.id });
     setConectando(false);
-    if (error) return avisar('Não foi possível conectar', error.message);
+    if (error) return avisar(ehPatrocinio ? 'Não foi possível apoiar' : 'Não foi possível conectar', error.message);
     setJaConectado(true);
   }
 
@@ -79,7 +82,9 @@ export default function OngSuggestionCard({ ong, match, categoria }) {
             {conectando ? (
               <ActivityIndicator size="small" color={theme.colors.background} />
             ) : (
-              <Text style={styles.connectBtnText}>{jaConectado ? 'Conectado' : 'Conectar-se'}</Text>
+              <Text style={styles.connectBtnText}>
+                {ehPatrocinio ? (jaConectado ? 'Apoiado' : 'Apoiar') : (jaConectado ? 'Conectado' : 'Conectar-se')}
+              </Text>
             )}
           </TouchableOpacity>
         </View>

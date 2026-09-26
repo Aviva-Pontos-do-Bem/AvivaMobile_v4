@@ -37,12 +37,14 @@ export default function CriarVaga() {
   const [endereco, setEndereco] = useState('');
   const [dataHoraTexto, setDataHoraTexto] = useState('');
   const [vagasDisponiveis, setVagasDisponiveis] = useState('');
+  const [horasEstimadas, setHorasEstimadas] = useState('');
   const [contatoEmergencia, setContatoEmergencia] = useState('');
   const [categoria, setCategoria] = useState(CATEGORIAS[0]);
   const [idadeMinima, setIdadeMinima] = useState('');
   const [requisitos, setRequisitos] = useState('');
   const [oQueLevar, setOQueLevar] = useState('');
   const [visibilidade, setVisibilidade] = useState('publico');
+  const [modalidade, setModalidade] = useState('presencial');
   const [imagemLocal, setImagemLocal] = useState(null); // uri no aparelho, antes do upload
   const [imagemAtualUrl, setImagemAtualUrl] = useState(null); // já publicada (modo edição)
   const [enviandoImagem, setEnviandoImagem] = useState(false);
@@ -71,12 +73,14 @@ export default function CriarVaga() {
       setEndereco(data.endereco || '');
       setDataHoraTexto(data.data_hora ? isoParaTextoDataHora(data.data_hora) : '');
       setVagasDisponiveis(String(data.vagas_disponiveis ?? ''));
+      setHorasEstimadas(data.horas_estimadas != null ? String(data.horas_estimadas) : '');
       setContatoEmergencia(data.contato_emergencia || '');
       setCategoria(data.categoria || CATEGORIAS[0]);
       setIdadeMinima(data.idade_minima ? String(data.idade_minima) : '');
       setRequisitos(data.requisitos || '');
       setOQueLevar(data.o_que_levar || '');
       setVisibilidade(data.visibilidade || 'publico');
+      setModalidade(data.modalidade || 'presencial');
       setImagemAtualUrl(data.imagem_url || null);
       setCarregandoVaga(false);
     })();
@@ -99,7 +103,7 @@ export default function CriarVaga() {
 
   async function salvar() {
     if (!titulo.trim() || !descricao.trim()) return avisar('Campos obrigatórios', 'Preencha título e descrição.');
-    if (!endereco.trim()) return avisar('Campo obrigatório', 'Informe o endereço completo do evento.');
+    if (modalidade !== 'remoto' && !endereco.trim()) return avisar('Campo obrigatório', 'Informe o endereço completo do evento.');
     if (!contatoEmergencia.trim()) return avisar('Campo obrigatório', 'Informe um telefone de contato para o dia.');
     const vagas = parseInt(vagasDisponiveis, 10);
     if (!vagasDisponiveis || Number.isNaN(vagas) || vagas <= 0) return avisar('Campo obrigatório', 'Informe quantas vagas estão disponíveis.');
@@ -125,7 +129,8 @@ export default function CriarVaga() {
         titulo: titulo.trim(), descricao: descricao.trim(), endereco: endereco.trim(),
         localizacao: endereco.trim(), data_hora: dataHoraIso, vagas_disponiveis: vagas, contato_emergencia: contatoEmergencia.trim(),
         categoria, idade_minima: idadeMinima ? parseInt(idadeMinima, 10) : null, requisitos: requisitos.trim() || null,
-        o_que_levar: oQueLevar.trim() || null, imagem_url: imagemUrlFinal, visibilidade,
+        o_que_levar: oQueLevar.trim() || null, imagem_url: imagemUrlFinal, visibilidade, modalidade,
+        horas_estimadas: horasEstimadas ? parseInt(horasEstimadas, 10) : null,
       };
 
       if (emEdicao) {
@@ -203,8 +208,22 @@ export default function CriarVaga() {
         <Text style={styles.label}>Descrição detalhada *</Text>
         <TextInput style={[styles.input, styles.textArea]} placeholder="Descreva a atividade em detalhes para o voluntário saber o que fará." value={descricao} onChangeText={setDescricao} multiline numberOfLines={5} placeholderTextColor={theme.colors.textLight} />
 
-        <Text style={styles.label}>Endereço completo *</Text>
-        <TextInput style={styles.input} placeholder="Rua, número, bairro, cidade" value={endereco} onChangeText={setEndereco} placeholderTextColor={theme.colors.textLight} />
+        <Text style={styles.label}>Modalidade</Text>
+        <View style={styles.visibilityRow}>
+          {[
+            { key: 'presencial', label: 'Presencial', icon: 'map-pin' },
+            { key: 'remoto', label: 'Remoto', icon: 'wifi' },
+            { key: 'hibrido', label: 'Híbrido', icon: 'shuffle' },
+          ].map((m) => (
+            <TouchableOpacity key={m.key} style={[styles.visibilityChip, modalidade === m.key && styles.visibilityChipActive]} onPress={() => setModalidade(m.key)}>
+              <Feather name={m.icon} size={14} color={modalidade === m.key ? theme.colors.background : theme.colors.textLight} />
+              <Text style={[styles.visibilityChipText, modalidade === m.key && styles.visibilityChipTextActive]}>{m.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={styles.label}>Endereço completo {modalidade !== 'remoto' && '*'}</Text>
+        <TextInput style={styles.input} placeholder={modalidade === 'remoto' ? 'Opcional para vagas remotas' : 'Rua, número, bairro, cidade'} value={endereco} onChangeText={setEndereco} placeholderTextColor={theme.colors.textLight} />
 
         <View style={styles.rowGrid}>
           <View style={{ flex: 1 }}>
@@ -215,6 +234,14 @@ export default function CriarVaga() {
             <Text style={styles.label}>Vagas *</Text>
             <TextInput style={styles.input} placeholder="Ex: 10" keyboardType="numeric" value={vagasDisponiveis} onChangeText={setVagasDisponiveis} placeholderTextColor={theme.colors.textLight} />
           </View>
+        </View>
+
+        <View style={styles.rowGrid}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.label}>Duração estimada (horas)</Text>
+            <TextInput style={styles.input} placeholder="Ex: 4 (opcional)" keyboardType="numeric" value={horasEstimadas} onChangeText={setHorasEstimadas} placeholderTextColor={theme.colors.textLight} />
+          </View>
+          <View style={{ flex: 1 }} />
         </View>
 
         <View style={styles.rowGrid}>
