@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import { Feather } from '@expo/vector-icons';
 import { supabase } from '../../supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,6 +10,7 @@ import OngSuggestionCard from '../../components/OngSuggestionCard';
 import RankingImpacto from '../../components/RankingImpacto';
 import NearbyOngsButton from '../../components/NearbyOngsButton';
 import { calcularMatch } from '../../lib/matching';
+import { distanciaKm, formatarDistancia } from '../../lib/geo';
 import { CATEGORIAS } from '../../lib/constants';
 import { theme } from '../../lib/theme';
 
@@ -18,6 +20,22 @@ const MODALIDADES = [
   { key: 'remoto', label: 'Remoto' },
   { key: 'hibrido', label: 'H\u00edbrido' },
 ];
+
+const RAIOS_KM = [
+  { key: 'todas', label: 'Qualquer dist\u00e2ncia' },
+  { key: 10, label: 'at\u00e9 10 km' },
+  { key: 25, label: 'at\u00e9 25 km' },
+  { key: 50, label: 'at\u00e9 50 km' },
+  { key: 100, label: 'at\u00e9 100 km' },
+];
+
+const avisar = (titulo, mensagem) => {
+  if (Platform.OS === 'web') alert(`${titulo}: ${mensagem}`);
+  else {
+    const { Alert } = require('react-native');
+    Alert.alert(titulo, mensagem);
+  }
+};
 
 function normalizar(texto) {
   return (texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -30,16 +48,41 @@ export default function Buscar() {
   const [query, setQuery] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas');
   const [modalidadeFiltro, setModalidadeFiltro] = useState('todas');
+  const [raioFiltro, setRaioFiltro] = useState('todas');
+  const [minhaPosicao, setMinhaPosicao] = useState(null);
+  const [buscandoLocalizacao, setBuscandoLocalizacao] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [vagas, setVagas] = useState([]);
   const [ongs, setOngs] = useState([]);
+
+  async function ativarFiltroDistancia() {
+    setBuscandoLocalizacao(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        avisar('Permissão necessária', 'Precisamos de acesso à sua localização para filtrar por distância.');
+        return;
+      }
+      const posicao = await Location.getCurrentPositionAsync({});
+      setMinhaPosicao({ lat: posicao.coords.latitude, lng: posicao.coords.longitude });
+    } catch (err) {
+      avisar('Erro ao obter localização', err.message || 'Tente novamente.');
+    } finally {
+      setBuscandoLocalizacao(false);
+    }
+  }
+
+  function desativarFiltroDistancia() {
+    setMinhaPosicao(null);
+    setRaioFiltro('todas');
+  }
 
   const carregar = useCallback(async () => {
     setCarregando(true);
     const [{ data: vagasData }, { data: ongsData }, { data: seguindoData }] = await Promise.all([
       supabase
         .from('vagas')
-        .select('id, titulo, categoria, modalidade, endereco, localizacao, vagas_disponiveis, ong_id, profiles ( id, full_name, foto_url, verificado )')
+        .select('id, titulo, categoria, modalidade, endereco, localizacao, vagas_disponiveis, ong_id, profiles ( id, full_name, foto_url, verificado, lat, lng )')
         .eq('ativa', true)
         .order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, full_name, foto_url, bio, endereco, verificado').eq('user_type', 'ong'),
@@ -65,10 +108,19 @@ export default function Buscar() {
 
   const termo = normalizar(query);
 
+  const vagasComDistancia = useMemo(() => {
+    if (!minhaPosicao) return vagas.map((v) => ({ ...v, distancia: null }));
+    return vagas.map((v) => ({
+      ...v,
+      distancia: distanciaKm(minhaPosicao.lat, minhaPosicao.lng, v.profiles?.lat, v.profiles?.lng),
+    }));
+  }, [vagas, minhaPosicao]);
+
   const vagasFiltradas = useMemo(() => {
-    return vagas.filter((v) => {
+    return vagasComDistancia.filter((v) => {
       if (categoriaFiltro !== 'todas' && v.categoria !== categoriaFiltro) return false;
       if (modalidadeFiltro !== 'todas' && (v.modalidade || 'presencial') !== modalidadeFiltro) return false;
+      if (minhaPosicao && raioFiltro !== 'todas' && (v.distancia == null || v.distancia > raioFiltro)) return false;
       if (!termo) return true;
       return (
         normalizar(v.titulo).includes(termo) ||
@@ -77,7 +129,7 @@ export default function Buscar() {
         normalizar(v.profiles?.full_name).includes(termo)
       );
     });
-  }, [vagas, termo, categoriaFiltro, modalidadeFiltro]);
+  }, [vagasComDistancia, termo, categoriaFiltro, modalidadeFiltro, raioFiltro, minhaPosicao]);
 
   const ongsComMatch = useMemo(() => {
     return ongs
@@ -122,6 +174,30 @@ export default function Buscar() {
         ))}
       </ScrollView>
 
+      {!minhaPosicao ? (
+        <TouchableOpacity style={styles.locationFilterBtn} onPress={ativarFiltroDistancia} disabled={buscandoLocalizacao}>
+          {buscandoLocalizacao ? (
+            <ActivityIndicator size="small" color={theme.colors.secondary} />
+          ) : (
+            <Feather name="map-pin" size={14} color={theme.colors.secondary} />
+          )}
+          <Text style={styles.locationFilterBtnText}>Filtrar por distância da minha localização</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.filterBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterBarContent}>
+            {RAIOS_KM.map((r) => (
+              <TouchableOpacity key={r.key} style={[styles.filterChip, styles.filterChipModalidade, raioFiltro === r.key && styles.filterChipActive]} onPress={() => setRaioFiltro(r.key)}>
+                <Text style={[styles.filterChipText, raioFiltro === r.key && styles.filterChipTextActive]}>{r.label}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.clearLocationChip} onPress={desativarFiltroDistancia}>
+              <Feather name="x" size={13} color={theme.colors.error} />
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+
       {carregando ? (
         <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
       ) : (
@@ -157,6 +233,7 @@ export default function Buscar() {
                   <Text style={styles.vagaTitulo} numberOfLines={1}>{item.titulo}</Text>
                   <Text style={styles.vagaMeta} numberOfLines={1}>
                     {item.profiles?.full_name} · {item.categoria} · {MODALIDADES.find((m) => m.key === (item.modalidade || 'presencial'))?.label} · {item.vagas_disponiveis ?? '—'} vagas
+                    {item.distancia != null ? ` · ${formatarDistancia(item.distancia)}` : ''}
                   </Text>
                 </View>
                 <TouchableOpacity style={styles.candidatarBtn} onPress={() => router.push(`/vaga/${item.id}`)}>
@@ -187,6 +264,10 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   filterChipText: { fontSize: 12, fontFamily: theme.fonts.button, color: theme.colors.textLight },
   filterChipTextActive: { color: theme.colors.background },
+
+  locationFilterBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: theme.colors.background, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  locationFilterBtnText: { fontSize: 12, fontFamily: theme.fonts.button, color: theme.colors.secondary },
+  clearLocationChip: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10 },
 
   content: { padding: 16, paddingBottom: 30 },
   sectionTitle: { fontSize: 16, fontFamily: theme.fonts.heading, color: theme.colors.text, marginBottom: 12 },

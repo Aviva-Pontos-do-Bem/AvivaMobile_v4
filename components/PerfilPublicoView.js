@@ -10,6 +10,7 @@ import CoverPicker from './CoverPicker';
 import PerfilSidebar from './PerfilSidebar';
 import PostsFeedList from './PostsFeedList';
 import MinhasVagasList from './MinhasVagasList';
+import RegistrarDoacaoModal from './RegistrarDoacaoModal';
 import { enviarAvatar } from '../lib/upload';
 import { formatarCNPJ } from '../lib/format';
 import { theme } from '../lib/theme';
@@ -17,8 +18,9 @@ import { theme } from '../lib/theme';
 const ROTULO_TIPO = { voluntario: 'Voluntário', ong: 'ONG', empresa: 'Empresa' };
 
 export default function PerfilPublicoView({ userId }) {
-  const { session, refreshProfile: refreshProfileProprio } = useAuth();
+  const { session, userType, refreshProfile: refreshProfileProprio } = useAuth();
   const router = useRouter();
+  const [modalDoacaoAberto, setModalDoacaoAberto] = useState(false);
 
   const souEu = userId === session.user.id;
 
@@ -233,6 +235,25 @@ export default function PerfilPublicoView({ userId }) {
           </View>
         )}
 
+        {!souEu && userType === 'empresa' && perfil.user_type === 'ong' && (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionLabel}>Doação dedutível de imposto</Text>
+            {perfil.elegivel_doacao_dedutivel ? (
+              <>
+                <Text style={styles.bodyText}>
+                  Essa ONG confirmou que cumpre os requisitos do art. 13 da Lei 9.249/95 — sua empresa pode deduzir a doação do IR (até 2% do lucro operacional, se estiver no Lucro Real).
+                </Text>
+                <TouchableOpacity style={styles.donationDeductibleBtn} onPress={() => setModalDoacaoAberto(true)}>
+                  <Feather name="file-text" size={16} color={theme.colors.background} />
+                  <Text style={styles.donationDeductibleBtnText}>Registrar doação dedutível</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <Text style={styles.bodyText}>Essa ONG ainda não confirmou elegibilidade para doação dedutível no perfil dela.</Text>
+            )}
+          </View>
+        )}
+
         {perfil.user_type === 'ong' && (
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
@@ -256,6 +277,21 @@ export default function PerfilPublicoView({ userId }) {
       </View>
 
       {souEu && <PerfilSidebar visivel={sidebarAberta} onFechar={() => setSidebarAberta(false)} email={session?.user?.email} userId={userId} />}
+      {!souEu && userType === 'empresa' && perfil.user_type === 'ong' && (
+        <RegistrarDoacaoModal
+          visivel={modalDoacaoAberto}
+          onFechar={() => setModalDoacaoAberto(false)}
+          ong={perfil}
+          onSucesso={() => {
+            setModalDoacaoAberto(false);
+            if (Platform.OS === 'web') alert('Doação registrada! A declaração foi gerada para download.');
+            else {
+              const { Alert } = require('react-native');
+              Alert.alert('Doação registrada!', 'A declaração foi gerada — confira o menu de compartilhamento.');
+            }
+          }}
+        />
+      )}
       <View style={{ height: 40 }} />
     </ScrollView>
   );
@@ -309,6 +345,9 @@ const styles = StyleSheet.create({
   donationMsg: { fontFamily: theme.fonts.body, fontSize: 13, color: theme.colors.textLight, marginTop: 4, lineHeight: 19 },
   pixBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: theme.colors.error, borderRadius: 14, paddingVertical: 12, marginTop: 14 },
   pixBtnText: { color: theme.colors.background, fontFamily: theme.fonts.button, fontSize: 13 },
+
+  donationDeductibleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: theme.colors.primary, borderRadius: 14, paddingVertical: 12, marginTop: 14 },
+  donationDeductibleBtnText: { color: theme.colors.background, fontFamily: theme.fonts.button, fontSize: 13 },
   
   infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   iconBox: { width: 36, height: 36, borderRadius: 10, backgroundColor: theme.colors.surface, justifyContent: 'center', alignItems: 'center', marginRight: 12 },

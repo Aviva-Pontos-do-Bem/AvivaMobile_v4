@@ -41,7 +41,8 @@
           "locationWhenInUsePermission": "O Aviva usa sua localização para marcar onde uma publicação aconteceu, quando você escolher adicioná-la."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-sharing"
     ],
     "web": {
       "bundler": "metro",
