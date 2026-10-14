@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "aviva-migration",
+    "name": "Aviva - Pontos do Bem",
     "slug": "aviva-migration",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,13 +16,15 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.aviva.pontosdobem"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "br.com.aviva.pontosdobem"
     },
     "plugins": [
       "expo-router",

@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import PostCard from '../../components/PostCard';
 import ComentariosList from '../../components/ComentariosList';
 import { theme } from '../../lib/theme';
+import { headerPadrao } from '../../lib/headerPadrao';
 
 export default function DetalhePost() {
   const { id } = useLocalSearchParams();
@@ -47,7 +48,7 @@ export default function DetalhePost() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ headerShown: true, title: 'Publicação' }} />
+      <Stack.Screen options={{ ...headerPadrao, title: 'Publicação' }} />
       {loading ? (
         <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 40 }} />
       ) : naoEncontrado ? (

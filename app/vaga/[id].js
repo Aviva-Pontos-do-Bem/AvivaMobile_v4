@@ -7,6 +7,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import Avatar from '../../components/Avatar';
 import SafetyNotice from '../../components/SafetyNotice';
 import { formatarDataEvento } from '../../lib/format';
+import { ODS } from '../../lib/ods';
+import { estiloCategoria } from '../../lib/categorias';
 import { theme } from '../../lib/theme';
 
 // Rota fora dos grupos (voluntario)/(ong)/(empresa) de propósito — igual ao
@@ -39,7 +41,7 @@ export default function DetalheVaga() {
       setLoading(true);
       const { data: vagaData, error: vagaError } = await supabase
         .from('vagas')
-        .select('id, titulo, descricao, categoria, modalidade, localizacao, endereco, imagem_url, data_hora, vagas_disponiveis, idade_minima, requisitos, o_que_levar, contato_emergencia, profiles ( id, full_name, foto_url, verificado, bio )')
+        .select('id, titulo, descricao, categoria, ods, modalidade, localizacao, endereco, imagem_url, data_hora, vagas_disponiveis, idade_minima, requisitos, o_que_levar, contato_emergencia, profiles ( id, full_name, foto_url, verificado, bio )')
         .eq('id', id)
         .single();
 
@@ -86,11 +88,13 @@ export default function DetalheVaga() {
           {vaga.imagem_url ? (
             <Image source={{ uri: vaga.imagem_url }} style={styles.cover} />
           ) : (
-            <View style={[styles.cover, styles.coverPlaceholder]}>
-              <Feather name="image" size={40} color={theme.colors.border} />
+            <View style={[styles.cover, styles.coverPlaceholder, { height: 220, backgroundColor: estiloCategoria(vaga.categoria).fundo }]}>
+              <View style={[styles.coverIcone, { backgroundColor: estiloCategoria(vaga.categoria).cor }]}>
+                <Feather name={estiloCategoria(vaga.categoria).icone} size={40} color="#FFFFFF" />
+              </View>
             </View>
           )}
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Voltar" style={styles.backButton} onPress={() => router.back()}>
             <Feather name="arrow-left" size={24} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
@@ -103,6 +107,15 @@ export default function DetalheVaga() {
               </View>
             )}
             <Text style={styles.title}>{vaga.titulo}</Text>
+            {(vaga.ods || []).length > 0 && (
+              <View style={styles.odsRow}>
+                {vaga.ods.filter((n) => ODS[n]).map((n) => (
+                  <View key={n} style={[styles.odsTag, { backgroundColor: ODS[n].cor }]} accessible accessibilityLabel={`Apoia o ODS ${n}, ${ODS[n].nome}`}>
+                    <Text style={styles.odsTagText}>ODS {n}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
             
             <TouchableOpacity style={styles.ongCard} onPress={() => router.push(`/perfil-publico/${ong.id}`)}>
               <Avatar nome={ong?.full_name} fotoUrl={ong?.foto_url} verificado={ong?.verificado} size={44} />
@@ -210,7 +223,7 @@ function ModalCandidatura({ visivel, onFechar, vagaId, voluntarioId, onSucesso, 
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Confirmar candidatura</Text>
-            <TouchableOpacity onPress={onFechar}><Feather name="x" size={24} color={theme.colors.textLight} /></TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Fechar" onPress={onFechar}><Feather name="x" size={24} color={theme.colors.textLight} /></TouchableOpacity>
           </View>
           <ScrollView>
             <Text style={styles.modalLabel}>Telefone de contato *</Text>
@@ -245,6 +258,10 @@ const styles = StyleSheet.create({
 
   content: { padding: 16, marginTop: -30 },
   titleCard: { backgroundColor: theme.colors.background, borderRadius: 24, padding: 20, marginBottom: 16, ...theme.shadows.card },
+  coverIcone: { width: 88, height: 88, borderRadius: 44, justifyContent: 'center', alignItems: 'center' },
+  odsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10, marginBottom: 14 },
+  odsTag: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6 },
+  odsTagText: { color: '#FFFFFF', fontFamily: theme.fonts.button, fontSize: 11 },
   categoryTag: { backgroundColor: theme.colors.successLight, alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8, marginBottom: 12 },
   categoryText: { color: theme.colors.success, fontFamily: theme.fonts.button, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 },
   title: { fontSize: 24, fontFamily: theme.fonts.heading, color: theme.colors.text, marginBottom: 20, lineHeight: 30 },

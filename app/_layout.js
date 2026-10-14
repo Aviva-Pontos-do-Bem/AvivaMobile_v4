@@ -1,5 +1,7 @@
 import { Stack } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
+import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
+import { Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { theme } from '../lib/theme';
 
@@ -45,6 +47,8 @@ function RootNavigator() {
         <Stack.Screen name="vaga/[id]" />
         <Stack.Screen name="sobre" />
         <Stack.Screen name="reclamacoes" />
+        <Stack.Screen name="notificacoes" />
+        <Stack.Screen name="doacoes" />
       </Stack.Protected>
 
       {/* Sem guard de propósito: precisa abrir tanto no cadastro (antes de
@@ -55,6 +59,25 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  // As fontes da marca precisam ser carregadas antes de desenhar qualquer tela;
+  // sem isso o app cai na fonte padrão do sistema. Se falharem (sem rede, no
+  // web), segue com a fonte padrão em vez de travar na tela de carregamento.
+  const [fontesProntas, erroFontes] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  });
+
+  if (!fontesProntas && !erroFontes) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <AuthProvider>
       <RootNavigator />

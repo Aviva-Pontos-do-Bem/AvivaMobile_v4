@@ -1,6 +1,7 @@
 import React from 'react';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import PerfilPublicoView from '../../components/PerfilPublicoView';
+import { headerPadrao } from '../../lib/headerPadrao';
 
 // Rota fora dos grupos (voluntario)/(ong)/(empresa) de propósito: é o
 // mesmo perfil público, alcançável a partir de qualquer papel — o
@@ -10,7 +11,7 @@ export default function PerfilPublico() {
   const { id } = useLocalSearchParams();
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: 'Perfil' }} />
+      <Stack.Screen options={{ ...headerPadrao, title: 'Perfil' }} />
       <PerfilPublicoView userId={id} />
     </>
   );

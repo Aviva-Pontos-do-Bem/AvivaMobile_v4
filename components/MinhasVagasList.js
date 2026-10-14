@@ -112,10 +112,10 @@ export default function MinhasVagasList({ ongId, podeGerenciar }) {
               <TouchableOpacity style={styles.actionIcon} onPress={() => router.push(`/criar-vaga?id=${vaga.id}`)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name="edit-2" size={16} color={theme.colors.primary} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionIcon} onPress={() => alternarAtiva(vaga)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Ativar ou desativar vaga" style={styles.actionIcon} onPress={() => alternarAtiva(vaga)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name={vaga.ativa ? 'pause-circle' : 'play-circle'} size={16} color={theme.colors.warning} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionIcon} onPress={() => confirmarExclusao(vaga)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Excluir vaga" style={styles.actionIcon} onPress={() => confirmarExclusao(vaga)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name="trash-2" size={16} color={theme.colors.error} />
               </TouchableOpacity>
             </View>

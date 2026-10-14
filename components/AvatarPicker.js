@@ -49,7 +49,7 @@ export default function AvatarPicker({ nome, fotoUrl, userId, size = 96, onUploa
   return (
     <View style={{ width: size, height: size }}>
       <Avatar nome={nome} fotoUrl={fotoUrl} size={size} />
-      <TouchableOpacity style={styles.cameraBtn} onPress={escolherFoto} disabled={enviando}>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Alterar foto de perfil" style={styles.cameraBtn} onPress={escolherFoto} disabled={enviando}>
         {enviando ? <ActivityIndicator size="small" color={theme.colors.background} /> : <Feather name="camera" size={16} color={theme.colors.background} />}
       </TouchableOpacity>
     </View>

@@ -12,7 +12,12 @@ function iniciais(nome) {
 
 export default function Avatar({ nome, fotoUrl, size = 44, verificado = false }) {
   return (
-    <View style={{ width: size, height: size }}>
+    <View
+      style={{ width: size, height: size }}
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={`${nome ? `Foto de ${nome}` : 'Foto de perfil'}${verificado ? ', perfil verificado' : ''}`}
+    >
       {fotoUrl ? (
         <Image source={{ uri: fotoUrl }} style={[styles.img, { width: size, height: size, borderRadius: size / 2 }]} />
       ) : (

@@ -3,6 +3,7 @@ import { View, Image, TouchableOpacity, ActivityIndicator, StyleSheet, Platform 
 import * as ImagePicker from 'expo-image-picker';
 import { Feather } from '@expo/vector-icons';
 import { enviarCapa } from '../lib/upload';
+import HeaderDecor from './HeaderDecor';
 import { theme } from '../lib/theme';
 
 const avisar = (titulo, mensagem) => {
@@ -50,10 +51,12 @@ export default function CoverPicker({ capaUrl, userId, editavel, onUploaded }) {
       {capaUrl ? (
         <Image source={{ uri: capaUrl }} style={styles.cover} />
       ) : (
-        <View style={[styles.cover, styles.placeholder]} />
+        <View style={[styles.cover, styles.placeholder]}>
+          <HeaderDecor />
+        </View>
       )}
       {editavel && (
-        <TouchableOpacity style={styles.cameraBtn} onPress={escolherCapa} disabled={enviando}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Alterar foto de capa" style={styles.cameraBtn} onPress={escolherCapa} disabled={enviando}>
           {enviando ? <ActivityIndicator size="small" color={theme.colors.background} /> : <Feather name="camera" size={16} color={theme.colors.background} />}
         </TouchableOpacity>
       )}
@@ -64,7 +67,7 @@ export default function CoverPicker({ capaUrl, userId, editavel, onUploaded }) {
 const styles = StyleSheet.create({
   wrap: { width: '100%' },
   cover: { width: '100%', height: 160, backgroundColor: theme.colors.surface },
-  placeholder: { backgroundColor: theme.colors.secondary },
+  placeholder: { backgroundColor: theme.colors.primary, overflow: 'hidden' },
   cameraBtn: {
     position: 'absolute', bottom: 12, right: 16,
     width: 36, height: 36, borderRadius: 18,

@@ -8,6 +8,9 @@ import { supabase } from '../../supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { theme } from '../../lib/theme';
 import { gerarHtmlRelatorioEsg } from '../../lib/relatorioEsg';
+import { ODS, agruparPorOds } from '../../lib/ods';
+import { somarImpactoAmbiental, temImpactoAmbiental, formatarQuantidade, AVISO_CO2 } from '../../lib/impactoAmbiental';
+import HeaderDecor from '../../components/HeaderDecor';
 
 const avisar = (titulo, mensagem) => {
   if (Platform.OS === 'web') alert(`${titulo}: ${mensagem}`);
@@ -16,6 +19,30 @@ const avisar = (titulo, mensagem) => {
     Alert.alert(titulo, mensagem);
   }
 };
+
+function Stat({ icone, cor, fundo, valor, rotulo, onPress }) {
+  const Conteudo = (
+    <>
+      <View style={[styles.statIcone, { backgroundColor: fundo }]}>
+        <Feather name={icone} size={20} color={cor} />
+      </View>
+      <Text style={styles.statNum}>{valor}</Text>
+      <Text style={styles.statLabel}>{rotulo}</Text>
+    </>
+  );
+  if (onPress) {
+    return (
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${rotulo}: ${valor}`} style={styles.statBox} onPress={onPress}>
+        {Conteudo}
+      </TouchableOpacity>
+    );
+  }
+  return (
+    <View style={styles.statBox} accessible accessibilityLabel={`${rotulo}: ${valor}`}>
+      {Conteudo}
+    </View>
+  );
+}
 
 export default function PainelEmpresa() {
   const { fullName, session } = useAuth();
@@ -33,6 +60,8 @@ export default function PainelEmpresa() {
   const [regimeTributario, setRegimeTributario] = useState(null);
   const [lucroOperacional, setLucroOperacional] = useState(null);
   const [totalDoado, setTotalDoado] = useState(0);
+  const [porOds, setPorOds] = useState({ lista: [], semClassificacao: { acoes: 0, horas: 0 } });
+  const [impactoAmbiental, setImpactoAmbiental] = useState({ arvores: 0, residuosKg: 0, co2Kg: 0 });
   const [doacoesDoAno, setDoacoesDoAno] = useState([]);
 
   const anoAtual = new Date().getFullYear();
@@ -42,7 +71,7 @@ export default function PainelEmpresa() {
   const carregar = useCallback(async () => {
     const { data: patrocinios } = await supabase
       .from('patrocinios')
-      .select('ong_id, profiles ( full_name )')
+      .select('ong_id, profiles!ong_id ( full_name )')
       .eq('empresa_id', session.user.id);
 
     const idsOngs = (patrocinios || []).map((p) => p.ong_id);
@@ -60,35 +89,19 @@ export default function PainelEmpresa() {
       setVagasApoiadas(0);
     }
 
-    const { data: funcionariosData } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('empresa_id', session.user.id);
+    const { data: totalFuncionarios } = await supabase.rpc('esg_total_funcionarios');
+    setFuncionarios(Number(totalFuncionarios) || 0);
 
-    const idsFuncionarios = (funcionariosData || []).map((f) => f.id);
-    setFuncionarios(idsFuncionarios.length);
+    // Só dados da vaga das ações concluídas dos funcionários — sem mensagem nem telefone do voluntário.
+    const { data: acoesData } = await supabase.rpc('esg_acoes_concluidas');
+    const acoes = (acoesData || []).map((a) => ({ vagas: a }));
+    setAcoesConcluidas(acoes.length);
+    setHorasVoluntariado(acoes.reduce((soma, c) => soma + (c.vagas?.horas_estimadas || 0), 0));
+    setPorOds(agruparPorOds(acoes));
+    setImpactoAmbiental(somarImpactoAmbiental(acoes));
 
-    if (idsFuncionarios.length > 0) {
-      const { data: candidaturasData } = await supabase
-        .from('candidaturas')
-        .select('status, vagas ( horas_estimadas )')
-        .in('voluntario_id', idsFuncionarios)
-        .eq('status', 'concluido');
-
-      const lista = candidaturasData || [];
-      setAcoesConcluidas(lista.length);
-      setHorasVoluntariado(lista.reduce((soma, c) => soma + (c.vagas?.horas_estimadas || 0), 0));
-    } else {
-      setAcoesConcluidas(0);
-      setHorasVoluntariado(0);
-    }
-
-    const { data: perfilFiscal } = await supabase
-      .from('profiles')
-      .select('regime_tributario')
-      .eq('id', session.user.id)
-      .maybeSingle();
-    setRegimeTributario(perfilFiscal?.regime_tributario || null);
+    const { data: meuPerfil } = await supabase.rpc('meu_perfil');
+    setRegimeTributario(meuPerfil?.[0]?.regime_tributario || null);
 
     const { data: parametroAno } = await supabase
       .from('parametros_fiscais_empresa')
@@ -104,6 +117,8 @@ export default function PainelEmpresa() {
       .from('doacoes')
       .select('valor, data_doacao, profiles:ong_id ( full_name )')
       .eq('empresa_id', session.user.id)
+      .eq('dedutivel', true)
+      .eq('status', 'confirmada')
       .gte('data_doacao', inicioAno)
       .lte('data_doacao', fimAno)
       .order('data_doacao', { ascending: false });
@@ -139,6 +154,8 @@ export default function PainelEmpresa() {
         totalDoado,
         tetoDedutivel,
         doacoes: doacoesDoAno,
+        porOds,
+        impactoAmbiental,
       });
 
       if (Platform.OS === 'web') {
@@ -173,6 +190,7 @@ export default function PainelEmpresa() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <HeaderDecor />
         <Text style={styles.title}>Painel Corporativo ESG</Text>
         <Text style={styles.subtitle}>{fullName}</Text>
       </View>
@@ -185,8 +203,9 @@ export default function PainelEmpresa() {
         <Text style={styles.sectionLabel}>Impacto Social Gerado</Text>
 
         <View style={styles.impactCard}>
+          <HeaderDecor />
           <View style={styles.iconBg}>
-            <Feather name="clock" size={28} color={theme.colors.secondary} />
+            <Feather name="clock" size={28} color={theme.colors.sun} />
           </View>
           <Text style={styles.impactValue}>{horasVoluntariado}h</Text>
           <Text style={styles.impactSub}>
@@ -197,26 +216,60 @@ export default function PainelEmpresa() {
         </View>
 
         <View style={styles.statsRow}>
-          <TouchableOpacity style={styles.statBox} onPress={() => router.push('/buscar')}>
-            <Text style={styles.statNum}>{ongsApoiadas}</Text>
-            <Text style={styles.statLabel}>ONGs Apoiadas</Text>
-          </TouchableOpacity>
-          <View style={styles.statBox}>
-            <Text style={styles.statNum}>{vagasApoiadas}</Text>
-            <Text style={styles.statLabel}>Vagas dessas ONGs</Text>
-          </View>
+          <Stat icone="heart" cor={theme.colors.coral} fundo="#FDE8E4" valor={ongsApoiadas} rotulo="ONGs apoiadas" onPress={() => router.push('/buscar')} />
+          <Stat icone="briefcase" cor="#C98F00" fundo="#FFF3D1" valor={vagasApoiadas} rotulo="Vagas dessas ONGs" />
         </View>
 
         <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNum}>{funcionarios}</Text>
-            <Text style={styles.statLabel}>Funcionários no app</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statNum}>{acoesConcluidas}</Text>
-            <Text style={styles.statLabel}>Ações concluídas</Text>
-          </View>
+          <Stat icone="users" cor="#2E9E73" fundo="#E3F6EE" valor={funcionarios} rotulo="Funcionários no app" />
+          <Stat icone="check-circle" cor={theme.colors.primary} fundo="#E3EAF3" valor={acoesConcluidas} rotulo="Ações concluídas" />
         </View>
+
+        {(porOds.lista.length > 0 || porOds.semClassificacao.acoes > 0) && (
+          <View style={styles.sectionCardEsg}>
+            <Text style={styles.sectionTitleEsg}>Contribuição para os ODS (ONU)</Text>
+            {porOds.lista.map((l) => (
+              <View key={l.ods} style={styles.odsRow} accessible accessibilityLabel={`ODS ${l.ods}, ${ODS[l.ods].nome}: ${l.acoes} ações, ${l.horas} horas`}>
+                <View style={[styles.odsBadge, { backgroundColor: ODS[l.ods].cor }]}>
+                  <Text style={styles.odsBadgeText}>{l.ods}</Text>
+                </View>
+                <Text style={styles.odsNome} numberOfLines={2}>{ODS[l.ods].nome}</Text>
+                <Text style={styles.odsValor}>{l.horas}h · {l.acoes} {l.acoes === 1 ? 'ação' : 'ações'}</Text>
+              </View>
+            ))}
+            {porOds.semClassificacao.acoes > 0 && (
+              <Text style={styles.notaEsg}>{porOds.semClassificacao.acoes} ação(ões) de vagas ainda sem ODS definido.</Text>
+            )}
+            <Text style={styles.notaEsg}>Uma ação pode contar em até 3 ODS, então a soma pode passar do total.</Text>
+          </View>
+        )}
+
+        {temImpactoAmbiental(impactoAmbiental) && (
+          <View style={styles.sectionCardEsg}>
+            <Text style={styles.sectionTitleEsg}>Impacto ambiental declarado</Text>
+            <View style={styles.ambientalRow}>
+              {impactoAmbiental.arvores > 0 && (
+                <View style={styles.ambientalBox}>
+                  <Text style={styles.ambientalNum}>{formatarQuantidade(impactoAmbiental.arvores)}</Text>
+                  <Text style={styles.statLabel}>Árvores plantadas</Text>
+                </View>
+              )}
+              {impactoAmbiental.residuosKg > 0 && (
+                <View style={styles.ambientalBox}>
+                  <Text style={styles.ambientalNum}>{formatarQuantidade(impactoAmbiental.residuosKg)} kg</Text>
+                  <Text style={styles.statLabel}>Resíduos reciclados</Text>
+                </View>
+              )}
+              {impactoAmbiental.arvores > 0 && (
+                <View style={styles.ambientalBox}>
+                  <Text style={styles.ambientalNum}>≈ {formatarQuantidade(impactoAmbiental.co2Kg)} kg</Text>
+                  <Text style={styles.statLabel}>CO₂e em 20 anos (estimativa)</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.notaEsg}>{AVISO_CO2}</Text>
+          </View>
+        )}
 
         {regimeTributario === 'lucro_real' ? (
           <View style={styles.dedutivelCard}>
@@ -271,21 +324,22 @@ export default function PainelEmpresa() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surface },
-  header: { paddingHorizontal: 20, paddingTop: 50, paddingBottom: 20, backgroundColor: theme.colors.background, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-  title: { fontSize: 24, fontFamily: theme.fonts.heading, color: theme.colors.text },
-  subtitle: { fontSize: 13, fontFamily: theme.fonts.body, color: theme.colors.textLight, marginTop: 2 },
+  header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 28, backgroundColor: theme.colors.primary, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, overflow: 'hidden' },
+  title: { fontSize: 24, fontFamily: theme.fonts.heading, color: '#FFFFFF' },
+  subtitle: { fontSize: 13, fontFamily: theme.fonts.body, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
   
   content: { padding: 20 },
   sectionLabel: { fontSize: 14, fontFamily: theme.fonts.heading, color: theme.colors.text, marginBottom: 12 },
   
-  impactCard: { backgroundColor: theme.colors.background, padding: 24, borderRadius: 24, alignItems: 'center', marginBottom: 16, ...theme.shadows.card },
-  iconBg: { width: 56, height: 56, borderRadius: 28, backgroundColor: theme.colors.successLight, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  impactValue: { fontSize: 36, fontFamily: theme.fonts.heading, color: theme.colors.secondary, lineHeight: 42 },
-  impactSub: { color: theme.colors.textLight, fontFamily: theme.fonts.body, fontSize: 13, marginTop: 4, textAlign: 'center' },
+  impactCard: { backgroundColor: theme.colors.primary, padding: 24, borderRadius: 28, alignItems: 'center', marginBottom: 16, overflow: 'hidden', ...theme.shadows.card, shadowOpacity: 0.16, shadowRadius: 14 },
+  iconBg: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  impactValue: { fontSize: 44, fontFamily: theme.fonts.heading, color: '#FFFFFF', lineHeight: 50, letterSpacing: -0.5 },
+  impactSub: { color: 'rgba(255,255,255,0.82)', fontFamily: theme.fonts.body, fontSize: 13, lineHeight: 19, marginTop: 4, textAlign: 'center' },
   
-  statsRow: { flexDirection: 'row', gap: 16, marginBottom: 24 },
-  statBox: { flex: 1, backgroundColor: theme.colors.background, padding: 20, borderRadius: 20, alignItems: 'center', ...theme.shadows.card },
-  statNum: { fontSize: 24, fontFamily: theme.fonts.heading, color: theme.colors.primary },
+  statsRow: { flexDirection: 'row', gap: 14, marginBottom: 14 },
+  statIcone: { width: 40, height: 40, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  statBox: { flex: 1, backgroundColor: theme.colors.background, padding: 18, borderRadius: 22, alignItems: 'center', ...theme.shadows.card },
+  statNum: { fontSize: 28, lineHeight: 34, fontFamily: theme.fonts.heading, color: theme.colors.primary },
   statLabel: { color: theme.colors.textLight, fontFamily: theme.fonts.body, fontSize: 12, marginTop: 4 },
 
   actionButton: { flexDirection: 'row', gap: 10, padding: 16, borderRadius: 16, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
@@ -294,6 +348,17 @@ const styles = StyleSheet.create({
   comingSoonCard: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: theme.colors.background, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border, borderStyle: 'dashed' },
   exportCard: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 16, backgroundColor: theme.colors.background, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.primary, ...theme.shadows.card },
 
+  sectionCardEsg: { backgroundColor: theme.colors.background, borderRadius: 20, padding: 20, marginBottom: 16, ...theme.shadows.card },
+  sectionTitleEsg: { fontFamily: theme.fonts.heading, fontSize: 15, color: theme.colors.text, marginBottom: 12 },
+  odsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  odsBadge: { width: 30, height: 30, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  odsBadgeText: { color: '#FFFFFF', fontFamily: theme.fonts.heading, fontSize: 13 },
+  odsNome: { flex: 1, fontFamily: theme.fonts.body, fontSize: 13, color: theme.colors.text },
+  odsValor: { fontFamily: theme.fonts.button, fontSize: 12, color: theme.colors.textLight },
+  notaEsg: { fontFamily: theme.fonts.body, fontSize: 11, color: theme.colors.textLight, lineHeight: 16, marginTop: 6 },
+  ambientalRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  ambientalBox: { flex: 1, minWidth: 100, backgroundColor: theme.colors.surface, borderRadius: 14, padding: 14, alignItems: 'center' },
+  ambientalNum: { fontFamily: theme.fonts.heading, fontSize: 18, color: theme.colors.secondary },
   dedutivelCard: { backgroundColor: theme.colors.background, borderRadius: 20, padding: 20, marginBottom: 16, ...theme.shadows.card },
   dedutivelTitle: { fontFamily: theme.fonts.heading, fontSize: 14, color: theme.colors.text, marginBottom: 10 },
   dedutivelValoresRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 10 },

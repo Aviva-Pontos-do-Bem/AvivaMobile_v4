@@ -138,7 +138,7 @@ export default function PostCard({ post, curtido, recomendado, onMudou, podeExcl
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.actionBtn} onPress={compartilhar}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Compartilhar publicação" style={styles.actionBtn} onPress={compartilhar}>
           <Feather name="share-2" size={18} color={theme.colors.textLight} />
         </TouchableOpacity>
       </View>

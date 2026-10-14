@@ -192,7 +192,7 @@ export default function ComposePostModal({ visivel, onFechar, onPublicado }) {
           <View style={styles.header}>
             <View style={{ width: 32 }} />
             <Text style={styles.title}>Criar publicação</Text>
-            <TouchableOpacity style={styles.closeBtn} onPress={onFechar} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Fechar" style={styles.closeBtn} onPress={onFechar} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Feather name="x" size={20} color={theme.colors.textLight} />
             </TouchableOpacity>
           </View>
@@ -212,7 +212,7 @@ export default function ComposePostModal({ visivel, onFechar, onPublicado }) {
                     <View style={styles.locationInline}>
                       <Feather name="map-pin" size={12} color={theme.colors.secondary} />
                       <Text style={styles.locationInlineText} numberOfLines={1}>em {localizacao.nome}</Text>
-                      <TouchableOpacity onPress={() => setLocalizacao(null)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                      <TouchableOpacity accessibilityRole="button" accessibilityLabel="Remover localização" onPress={() => setLocalizacao(null)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
                         <Feather name="x" size={12} color={theme.colors.textLight} />
                       </TouchableOpacity>
                     </View>
@@ -246,7 +246,7 @@ export default function ComposePostModal({ visivel, onFechar, onPublicado }) {
                     ) : (
                       <Image source={{ uri: m.uri }} style={styles.thumbMidia} />
                     )}
-                    <TouchableOpacity style={styles.removeImg} onPress={() => removerMidia(m.id)}>
+                    <TouchableOpacity accessibilityRole="button" accessibilityLabel="Remover mídia" style={styles.removeImg} onPress={() => removerMidia(m.id)}>
                       <Feather name="x" size={14} color={theme.colors.background} />
                     </TouchableOpacity>
                   </View>
@@ -260,13 +260,13 @@ export default function ComposePostModal({ visivel, onFechar, onPublicado }) {
               Adicionar à publicação{midias.length > 0 ? ` (${midias.length})` : ''}
             </Text>
             <View style={styles.attachIcons}>
-              <TouchableOpacity style={styles.iconCircle} onPress={escolherImagens}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Adicionar fotos" style={styles.iconCircle} onPress={escolherImagens}>
                 <Feather name="image" size={19} color="#2FA84F" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.iconCircle} onPress={escolherVideos}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Adicionar vídeos" style={styles.iconCircle} onPress={escolherVideos}>
                 <Feather name="video" size={19} color="#1877F2" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.iconCircle} onPress={adicionarLocalizacao} disabled={buscandoLocalizacao}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Adicionar localização" style={styles.iconCircle} onPress={adicionarLocalizacao} disabled={buscandoLocalizacao}>
                 {buscandoLocalizacao ? (
                   <ActivityIndicator size="small" color={theme.colors.error} />
                 ) : (

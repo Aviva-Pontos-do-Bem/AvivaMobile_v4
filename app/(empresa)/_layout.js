@@ -1,17 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { theme } from '../../lib/theme';
+import { tabScreenOptions } from '../../lib/tabBar';
 
 export default function EmpresaTabsLayout() {
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textLight,
-        tabBarLabelStyle: { fontSize: 10.5, fontFamily: theme.fonts.body },
-        tabBarStyle: { backgroundColor: theme.colors.background, borderTopColor: theme.colors.border },
-      }}
+      screenOptions={tabScreenOptions}
     >
       <Tabs.Screen
         name="index"

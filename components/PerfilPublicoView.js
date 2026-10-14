@@ -20,7 +20,7 @@ const ROTULO_TIPO = { voluntario: 'Voluntário', ong: 'ONG', empresa: 'Empresa' 
 export default function PerfilPublicoView({ userId }) {
   const { session, userType, refreshProfile: refreshProfileProprio } = useAuth();
   const router = useRouter();
-  const [modalDoacaoAberto, setModalDoacaoAberto] = useState(false);
+  const [modalDoacao, setModalDoacao] = useState(null); // null | 'pix' | 'dedutivel'
 
   const souEu = userId === session.user.id;
 
@@ -107,7 +107,7 @@ export default function PerfilPublicoView({ userId }) {
 
       <View style={styles.content}>
         <View style={styles.headerCard}>
-          <TouchableOpacity onPress={souEu ? trocarAvatarRapido : undefined} activeOpacity={souEu ? 0.7 : 1} style={styles.avatarWrap}>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Alterar foto de perfil" onPress={souEu ? trocarAvatarRapido : undefined} activeOpacity={souEu ? 0.7 : 1} style={styles.avatarWrap}>
             <View style={styles.avatarBorder}>
               <Avatar nome={perfil.full_name} fotoUrl={perfil.foto_url} verificado={perfil.verificado} size={84} />
             </View>
@@ -135,7 +135,7 @@ export default function PerfilPublicoView({ userId }) {
                   <Feather name="edit-2" size={14} color={theme.colors.primary} />
                   <Text style={styles.editBtnText}>Editar</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuBtn} onPress={() => setSidebarAberta(true)}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Abrir menu de configurações" style={styles.menuBtn} onPress={() => setSidebarAberta(true)}>
                   <Feather name="settings" size={18} color={theme.colors.text} />
                 </TouchableOpacity>
               </View>
@@ -144,7 +144,7 @@ export default function PerfilPublicoView({ userId }) {
                 <TouchableOpacity style={[styles.followBtn, jaSigo && styles.followingBtn]} onPress={alternarSeguir} disabled={alternandoSeguir}>
                   <Text style={[styles.followBtnText, jaSigo && styles.followingBtnText]}>{jaSigo ? 'Seguindo' : 'Seguir'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuBtn} onPress={() => router.push('/reclamacoes')}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Enviar reclamação ou denúncia" style={styles.menuBtn} onPress={() => router.push(`/reclamacoes?perfil=${userId}`)}>
                   <Feather name="flag" size={18} color={theme.colors.textLight} />
                 </TouchableOpacity>
               </View>
@@ -232,6 +232,12 @@ export default function PerfilPublicoView({ userId }) {
                 <Text style={styles.pixBtnText}>Copiar chave Pix</Text>
               </TouchableOpacity>
             )}
+            {!souEu && !!perfil.chave_pix && (userType === 'voluntario' || userType === 'empresa') && (
+              <TouchableOpacity accessibilityRole="button" style={styles.pixInformarBtn} onPress={() => setModalDoacao('pix')}>
+                <Feather name="check-circle" size={14} color={theme.colors.error} />
+                <Text style={styles.pixInformarText}>Já fiz o Pix — informar doação</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -243,7 +249,7 @@ export default function PerfilPublicoView({ userId }) {
                 <Text style={styles.bodyText}>
                   Essa ONG confirmou que cumpre os requisitos do art. 13 da Lei 9.249/95 — sua empresa pode deduzir a doação do IR (até 2% do lucro operacional, se estiver no Lucro Real).
                 </Text>
-                <TouchableOpacity style={styles.donationDeductibleBtn} onPress={() => setModalDoacaoAberto(true)}>
+                <TouchableOpacity style={styles.donationDeductibleBtn} onPress={() => setModalDoacao('dedutivel')}>
                   <Feather name="file-text" size={16} color={theme.colors.background} />
                   <Text style={styles.donationDeductibleBtnText}>Registrar doação dedutível</Text>
                 </TouchableOpacity>
@@ -277,17 +283,18 @@ export default function PerfilPublicoView({ userId }) {
       </View>
 
       {souEu && <PerfilSidebar visivel={sidebarAberta} onFechar={() => setSidebarAberta(false)} email={session?.user?.email} userId={userId} />}
-      {!souEu && userType === 'empresa' && perfil.user_type === 'ong' && (
+      {!souEu && (userType === 'empresa' || userType === 'voluntario') && perfil.user_type === 'ong' && (
         <RegistrarDoacaoModal
-          visivel={modalDoacaoAberto}
-          onFechar={() => setModalDoacaoAberto(false)}
+          visivel={modalDoacao !== null}
+          onFechar={() => setModalDoacao(null)}
           ong={perfil}
+          dedutivel={modalDoacao === 'dedutivel'}
           onSucesso={() => {
-            setModalDoacaoAberto(false);
-            if (Platform.OS === 'web') alert('Doação registrada! A declaração foi gerada para download.');
+            setModalDoacao(null);
+            if (Platform.OS === 'web') alert('Doação informada! A ONG foi avisada e vai confirmar o recebimento.');
             else {
               const { Alert } = require('react-native');
-              Alert.alert('Doação registrada!', 'A declaração foi gerada — confira o menu de compartilhamento.');
+              Alert.alert('Doação informada!', 'A ONG foi avisada e vai confirmar o recebimento. Acompanhe em "Minhas doações".');
             }
           }}
         />
@@ -343,6 +350,8 @@ const styles = StyleSheet.create({
   donationIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: theme.colors.errorLight || theme.colors.surface, justifyContent: 'center', alignItems: 'center' },
   donationTitle: { fontFamily: theme.fonts.heading, fontSize: 14.5, color: theme.colors.text },
   donationMsg: { fontFamily: theme.fonts.body, fontSize: 13, color: theme.colors.textLight, marginTop: 4, lineHeight: 19 },
+  pixInformarBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10, paddingVertical: 12, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.error, backgroundColor: theme.colors.background },
+  pixInformarText: { color: theme.colors.error, fontFamily: theme.fonts.button, fontSize: 13 },
   pixBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: theme.colors.error, borderRadius: 14, paddingVertical: 12, marginTop: 14 },
   pixBtnText: { color: theme.colors.background, fontFamily: theme.fonts.button, fontSize: 13 },
 

@@ -89,7 +89,7 @@ export default function ComentariosList({ postId }) {
           onChangeText={setTexto}
           multiline
         />
-        <TouchableOpacity style={styles.sendBtn} onPress={enviar} disabled={enviando || !texto.trim()}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Enviar comentário" style={styles.sendBtn} onPress={enviar} disabled={enviando || !texto.trim()}>
           {enviando ? <ActivityIndicator size="small" color={theme.colors.background} /> : <Feather name="send" size={14} color={theme.colors.background} />}
         </TouchableOpacity>
       </View>

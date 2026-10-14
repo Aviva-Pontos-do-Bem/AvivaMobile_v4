@@ -6,6 +6,7 @@ import * as Linking from 'expo-linking';
 import { supabase } from '../../supabase';
 import { theme } from '../../lib/theme';
 import { validarEmail, validarCNPJ, validarSenhaForte } from '../../lib/validation';
+import HeaderDecor from '../../components/HeaderDecor';
 
 // Necessário no Web para o navegador voltar o controle pro app depois do
 // popup de login do Google fechar (não faz nada em iOS/Android).
@@ -162,11 +163,16 @@ export default function AuthScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.logoContainer}>
-        {/* Ajuste o caminho da imagem conforme a localização real no seu projeto */}
-        <Image 
-          source={require('../../logoAviva.png')} 
-          style={styles.logoImage} 
+      <View style={styles.hero}>
+        <HeaderDecor />
+        <Text style={styles.heroTitle}>Conecte propósito e ação.</Text>
+        <Text style={styles.heroSub}>Voluntários, ONGs e empresas num só lugar.</Text>
+      </View>
+      <View style={styles.logoCard}>
+        <Image
+          accessibilityLabel="Logo do Aviva, Pontos do Bem"
+          source={require('../../logoAviva.png')}
+          style={styles.logoImage}
           resizeMode="contain"
         />
       </View>
@@ -341,13 +347,36 @@ const styles = StyleSheet.create({
     padding: 30,
     ...Platform.select({ web: { maxWidth: 450, alignSelf: 'center', width: '100%' } }),
   },
-  logoContainer: { 
-    alignItems: 'center', 
-    marginBottom: 40 
+  hero: {
+    alignSelf: 'stretch',
+    marginHorizontal: -30,
+    marginTop: -30,
+    paddingTop: 64,
+    paddingBottom: 84,
+    paddingHorizontal: 30,
+    backgroundColor: theme.colors.primary,
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
+    overflow: 'hidden',
+    alignItems: 'center',
+  },
+  heroTitle: { ...theme.type.h1, color: '#FFFFFF', textAlign: 'center' },
+  heroSub: { ...theme.type.body, color: 'rgba(255,255,255,0.82)', textAlign: 'center', marginTop: 6 },
+  logoCard: {
+    marginTop: -58,
+    marginBottom: 24,
+    backgroundColor: theme.colors.background,
+    borderRadius: 28,
+    paddingVertical: 14,
+    paddingHorizontal: 22,
+    ...theme.shadows.card,
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 6,
   },
   logoImage: {
-    width: 200,
-    height: 120,
+    width: 190,
+    height: 112,
   },
   greeting: { 
     fontSize: 28, 
@@ -402,7 +431,8 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.body
   },
   buttonRow: { 
-    flexDirection: 'row', 
+    flexDirection: 'row',
+    width: '100%', 
     gap: 10, 
     marginBottom: 40 
   },

@@ -27,7 +27,7 @@ function ItemImagem({ uri }) {
       </View>
     );
   }
-  return <Image source={{ uri }} style={styles.midia} onError={() => setFalhou(true)} />;
+  return <Image accessibilityLabel="Imagem da publicação" source={{ uri }} style={styles.midia} onError={() => setFalhou(true)} />;
 }
 
 // Recebe uma lista já normalizada de { tipo: 'imagem' | 'video', url }.

@@ -22,6 +22,20 @@ const avisar = (titulo, mensagem) => {
   }
 };
 
+function Secao({ icone, titulo, children }) {
+  return (
+    <View style={styles.cartao}>
+      <View style={styles.secaoTopo}>
+        <View style={styles.secaoIcone}>
+          <Feather name={icone} size={17} color={theme.colors.primary} />
+        </View>
+        <Text style={styles.secaoTitulo}>{titulo}</Text>
+      </View>
+      {children}
+    </View>
+  );
+}
+
 export default function PerfilForm() {
   const { session, profile, userType, refreshProfile } = useAuth();
   const router = useRouter();
@@ -248,6 +262,7 @@ export default function PerfilForm() {
         <AvatarPicker nome={fullName} fotoUrl={fotoUrl} userId={session.user.id} size={96} onUploaded={setFotoUrl} />
       </View>
 
+      <Secao icone="user" titulo={isOrganizacao ? 'Sobre a organização' : 'Sobre você'}>
       <Text style={styles.label}>{isOrganizacao ? 'Razão social / nome fantasia *' : 'Nome completo *'}</Text>
       <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="Digite aqui" placeholderTextColor={theme.colors.textLight} />
 
@@ -265,8 +280,10 @@ export default function PerfilForm() {
       <Text style={styles.label}>Telefone</Text>
       <TextInput style={styles.input} value={telefone} onChangeText={(t) => setTelefone(formatarTelefoneBR(t))} placeholder="(11) 90000-0000" keyboardType="phone-pad" placeholderTextColor={theme.colors.textLight} />
 
+      </Secao>
+
       {isVoluntario && (
-        <>
+        <Secao icone="briefcase" titulo="Trabalho">
           <Text style={styles.label}>Empresa onde você trabalha (opcional)</Text>
           <Text style={styles.locationHint}>
             Vincular sua empresa faz suas ações concluídas contarem no painel ESG dela.
@@ -276,7 +293,7 @@ export default function PerfilForm() {
             <View style={styles.empresaSelecionadaRow}>
               <Feather name="briefcase" size={16} color={theme.colors.secondary} />
               <Text style={styles.empresaSelecionadaText} numberOfLines={1}>{empresaNome || 'Empresa vinculada'}</Text>
-              <TouchableOpacity onPress={removerVinculoEmpresa}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Remover vínculo com a empresa" onPress={removerVinculoEmpresa}>
                 <Feather name="x-circle" size={18} color={theme.colors.error} />
               </TouchableOpacity>
             </View>
@@ -301,11 +318,11 @@ export default function PerfilForm() {
               )}
             </>
           )}
-        </>
+        </Secao>
       )}
 
       {isOrganizacao && (
-        <>
+        <Secao icone="map-pin" titulo="Localização e contato">
           <Text style={styles.label}>Endereço completo</Text>
           <TextInput style={styles.input} value={endereco} onChangeText={setEndereco} placeholder="Rua, número, bairro, cidade" placeholderTextColor={theme.colors.textLight} />
 
@@ -335,11 +352,11 @@ export default function PerfilForm() {
 
           <Text style={styles.label}>CNPJ</Text>
           <TextInput style={styles.input} value={documento} onChangeText={(t) => setDocumento(formatarCNPJ(t))} placeholder="00.000.000/0000-00" keyboardType="numeric" placeholderTextColor={theme.colors.textLight} />
-        </>
+        </Secao>
       )}
 
       {isEmpresa && (
-        <>
+        <View style={styles.cartao}>
           <Text style={styles.sectionTitle}>Doação dedutível de imposto</Text>
           <Text style={styles.sectionHint}>
             Só empresas no Lucro Real têm benefício fiscal ao doar para ONGs (art. 13 da Lei 9.249/95). Informe seu regime e uma estimativa do lucro operacional do ano pra calcularmos quanto ainda pode ser doado com dedução.
@@ -378,11 +395,11 @@ export default function PerfilForm() {
               </Text>
             </>
           )}
-        </>
+        </View>
       )}
 
       {isOng && (
-        <>
+        <View style={styles.cartao}>
           <Text style={styles.sectionTitle}>Elegibilidade para doação dedutível</Text>
           <Text style={styles.sectionHint}>
             Empresas do Lucro Real podem deduzir doações a organizações que cumprem os arts. 3º e 16 da Lei 9.790/99 — sem precisar de OSCIP/CEBAS. Confirme os itens abaixo pra aparecer como apta a receber doação dedutível.
@@ -422,17 +439,20 @@ export default function PerfilForm() {
           ) : (
             <Text style={styles.locationHint}>Confirme os 3 itens acima pra sua organização aparecer como apta a receber doação dedutível de empresas.</Text>
           )}
-        </>
+        </View>
       )}
 
       {isOng && (
-        <>
+        <Secao icone="heart" titulo="Doações">
           <View style={styles.donationToggleRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.donationToggleTitle}>Aceitar doações</Text>
               <Text style={styles.donationToggleSub}>Mostra um cartão de doação no seu perfil público.</Text>
             </View>
             <TouchableOpacity
+              accessibilityRole="switch"
+              accessibilityLabel="Aceitar doações"
+              accessibilityState={{ checked: aceitaDoacoes }}
               style={[styles.switchTrack, aceitaDoacoes && styles.switchTrackActive]}
               onPress={() => setAceitaDoacoes((v) => !v)}
             >
@@ -457,7 +477,7 @@ export default function PerfilForm() {
               />
             </>
           )}
-        </>
+        </Secao>
       )}
 
       <TouchableOpacity style={styles.saveButton} onPress={salvar} disabled={salvando}>
@@ -468,7 +488,11 @@ export default function PerfilForm() {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, paddingTop: 30, backgroundColor: theme.colors.background },
+  container: { padding: 16, paddingTop: 24, backgroundColor: theme.colors.surface },
+  cartao: { backgroundColor: theme.colors.background, borderRadius: 24, padding: 18, paddingTop: 16, marginBottom: 16, ...theme.shadows.card },
+  secaoTopo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  secaoIcone: { width: 34, height: 34, borderRadius: 12, backgroundColor: theme.colors.pill, justifyContent: 'center', alignItems: 'center' },
+  secaoTitulo: { ...theme.type.h3, color: theme.colors.text },
   avatarWrap: { alignItems: 'center', marginBottom: 20 },
   label: { fontSize: 13, fontFamily: theme.fonts.button, color: theme.colors.textLight, marginBottom: 8, marginTop: 16 },
   input: { backgroundColor: theme.colors.surface, fontFamily: theme.fonts.body, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text },
@@ -482,7 +506,7 @@ const styles = StyleSheet.create({
   empresaResultRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: theme.colors.surface, borderRadius: 10, marginTop: 6 },
   empresaResultText: { fontFamily: theme.fonts.body, fontSize: 13, color: theme.colors.text },
 
-  sectionTitle: { fontSize: 15, fontFamily: theme.fonts.heading, color: theme.colors.text, marginTop: 28 },
+  sectionTitle: { fontSize: 15, fontFamily: theme.fonts.heading, color: theme.colors.text, marginTop: 0 },
   sectionHint: { fontSize: 12, fontFamily: theme.fonts.body, color: theme.colors.textLight, marginTop: 6, marginBottom: 16, lineHeight: 18 },
   warningText: { fontSize: 12, fontFamily: theme.fonts.body, color: theme.colors.warning, marginTop: 8, lineHeight: 17 },
 

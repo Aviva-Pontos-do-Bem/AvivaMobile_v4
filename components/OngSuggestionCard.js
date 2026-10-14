@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
+import Avatar from './Avatar';
 import { theme } from '../lib/theme';
 
 const avisar = (titulo, mensagem) => {
@@ -44,7 +45,7 @@ export default function OngSuggestionCard({ ong, match, categoria, modo = 'segui
           <Image source={{ uri: ong.foto_url }} style={styles.coverImg} />
         ) : (
           <View style={styles.coverPlaceholder}>
-            <Feather name="image" size={28} color={theme.colors.border} />
+            <Avatar nome={ong.full_name} size={52} />
           </View>
         )}
         {match != null && (
@@ -94,10 +95,10 @@ export default function OngSuggestionCard({ ong, match, categoria, modo = 'segui
 }
 
 const styles = StyleSheet.create({
-  card: { width: 220, backgroundColor: theme.colors.background, borderRadius: 18, borderWidth: 1, borderColor: theme.colors.border, overflow: 'hidden', ...theme.shadows.card },
-  cover: { height: 92, backgroundColor: theme.colors.surface },
+  card: { width: 220, backgroundColor: theme.colors.background, borderRadius: 22, overflow: 'hidden', ...theme.shadows.card, shadowOpacity: 0.09, shadowRadius: 12 },
+  cover: { height: 92, backgroundColor: theme.colors.pill },
   coverImg: { width: '100%', height: '100%' },
-  coverPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: theme.colors.border, borderStyle: 'dashed', margin: 8, borderRadius: 10 },
+  coverPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   matchBadge: { position: 'absolute', top: 8, right: 8, backgroundColor: theme.colors.success, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 100 },
   matchBadgeText: { color: theme.colors.background, fontFamily: theme.fonts.button, fontSize: 10.5 },
 
