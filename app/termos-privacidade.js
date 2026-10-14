@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'r
 import { Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { theme } from '../lib/theme';
+import { headerPadrao } from '../lib/headerPadrao';
 
 const ULTIMA_ATUALIZACAO = '25 de setembro de 2026';
 
@@ -86,7 +87,7 @@ export default function TermosPrivacidade() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-      <Stack.Screen options={{ headerShown: true, title: 'Termos e Privacidade' }} />
+      <Stack.Screen options={{ ...headerPadrao, title: 'Termos e Privacidade' }} />
 
       <Text style={styles.updated}>Última atualização: {ULTIMA_ATUALIZACAO}</Text>
 

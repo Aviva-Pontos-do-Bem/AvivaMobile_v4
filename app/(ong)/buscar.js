@@ -8,6 +8,7 @@ import RankingImpacto from '../../components/RankingImpacto';
 import NearbyOngsButton from '../../components/NearbyOngsButton';
 import { calcularMatch } from '../../lib/matching';
 import { theme } from '../../lib/theme';
+import HeaderDecor from '../../components/HeaderDecor';
 
 function normalizar(texto) {
   return (texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -60,6 +61,7 @@ export default function BuscarOng() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <HeaderDecor />
         <Text style={styles.title}>Buscar</Text>
         <Text style={styles.subtitle}>Encontre voluntários e empresas parceiras</Text>
         <SearchBar valor={query} onMudar={setQuery} placeholder="Buscar por nome ou causa..." />
@@ -104,9 +106,9 @@ export default function BuscarOng() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface },
-  header: { paddingHorizontal: 20, paddingTop: 50, paddingBottom: 20, backgroundColor: theme.colors.background, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-  title: { fontSize: 24, fontFamily: theme.fonts.heading, color: theme.colors.text },
-  subtitle: { fontSize: 13, fontFamily: theme.fonts.body, color: theme.colors.textLight, marginTop: 2, marginBottom: 16 },
+  header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 28, backgroundColor: theme.colors.primary, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, overflow: 'hidden' },
+  title: { fontSize: 24, fontFamily: theme.fonts.heading, color: '#FFFFFF' },
+  subtitle: { fontSize: 13, fontFamily: theme.fonts.body, color: 'rgba(255,255,255,0.8)', marginTop: 2, marginBottom: 16 },
 
   content: { padding: 16, paddingBottom: 30 },
   sectionTitle: { fontSize: 16, fontFamily: theme.fonts.heading, color: theme.colors.text, marginBottom: 12 },

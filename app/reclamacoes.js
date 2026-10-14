@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, ActivityIndicator } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { theme } from '../lib/theme';
+import { headerPadrao } from '../lib/headerPadrao';
 
 const avisar = (titulo, mensagem) => {
   if (Platform.OS === 'web') alert(`${titulo}: ${mensagem}`);
@@ -25,6 +26,7 @@ const CATEGORIAS = [
 export default function Reclamacoes() {
   const { session } = useAuth();
   const router = useRouter();
+  const { perfil: perfilDenunciado } = useLocalSearchParams();
   const [categoria, setCategoria] = useState(CATEGORIAS[0].id);
   const [assunto, setAssunto] = useState('');
   const [descricao, setDescricao] = useState('');
@@ -34,7 +36,7 @@ export default function Reclamacoes() {
     if (!assunto.trim() || !descricao.trim()) return avisar('Preencha tudo', 'Escreva um assunto e uma descrição.');
     setEnviando(true);
     const { error } = await supabase.from('reclamacoes').insert({
-      autor_id: session.user.id, categoria, assunto: assunto.trim(), descricao: descricao.trim(),
+      autor_id: session.user.id, perfil_relacionado_id: perfilDenunciado || null, categoria, assunto: assunto.trim(), descricao: descricao.trim(),
     });
     setEnviando(false);
     if (error) return avisar('Não foi possível enviar', error.message);
@@ -45,7 +47,7 @@ export default function Reclamacoes() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-      <Stack.Screen options={{ headerShown: true, title: 'Central de Ajuda' }} />
+      <Stack.Screen options={{ ...headerPadrao, title: 'Central de Ajuda' }} />
 
       <Text style={styles.intro}>
         Encontrou algo errado — um perfil falso, conteúdo impróprio ou um problema no app? Conte para a gente aqui.

@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, Modal, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, ScrollView, KeyboardAvoidingView } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import { Feather } from '@expo/vector-icons';
 import { supabase } from '../supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { enviarDocumentoFiscal } from '../lib/upload';
 import { parseDataBR } from '../lib/format';
-import { gerarHtmlDeclaracaoDoacao } from '../lib/declaracaoDoacao';
+import { parseValorBR } from '../lib/doacoes';
 import { theme } from '../lib/theme';
 
 const avisar = (titulo, mensagem) => {
@@ -19,13 +17,20 @@ const avisar = (titulo, mensagem) => {
   }
 };
 
-// Registra uma doação de empresa -> ONG (art. 13 da Lei 9.249/95) e, ao
-// concluir, já gera a declaração padrão pra empresa levar pra contabilidade
-// — o mesmo padrão de exportação em PDF usado no relatório ESG.
-export default function RegistrarDoacaoModal({ visivel, onFechar, ong, onSucesso }) {
-  const { session, profile } = useAuth();
+function hojeBR() {
+  const d = new Date();
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+}
+
+// Informa uma doação feita por Pix (o dinheiro vai direto do banco de quem doa
+// para a ONG — o Aviva nunca recebe nem repassa valores). A doação nasce
+// "aguardando confirmação": só conta depois que a ONG confirmar o recebimento.
+// Com `dedutivel`, é a doação de empresa do art. 13 da Lei 9.249/95; a
+// declaração em PDF só fica disponível depois da confirmação da ONG.
+export default function RegistrarDoacaoModal({ visivel, onFechar, ong, onSucesso, dedutivel = false }) {
+  const { session } = useAuth();
   const [valorTexto, setValorTexto] = useState('');
-  const [dataTexto, setDataTexto] = useState('');
+  const [dataTexto, setDataTexto] = useState(hojeBR());
   const [comprovantePath, setComprovantePath] = useState(null);
   const [comprovanteNome, setComprovanteNome] = useState('');
   const [enviandoComprovante, setEnviandoComprovante] = useState(false);
@@ -49,46 +54,28 @@ export default function RegistrarDoacaoModal({ visivel, onFechar, ong, onSucesso
 
   function limpar() {
     setValorTexto('');
-    setDataTexto('');
+    setDataTexto(hojeBR());
     setComprovantePath(null);
     setComprovanteNome('');
   }
 
   async function confirmar() {
-    const valor = Number(valorTexto.replace(/\./g, '').replace(',', '.'));
-    if (!valorTexto.trim() || Number.isNaN(valor) || valor <= 0) {
-      return avisar('Valor inválido', 'Informe o valor doado.');
-    }
+    const valor = parseValorBR(valorTexto);
+    if (valor == null) return avisar('Valor inválido', 'Informe o valor doado, por exemplo 50,00.');
     const dataIso = parseDataBR(dataTexto);
     if (!dataIso) return avisar('Data inválida', 'Use o formato DD/MM/AAAA.');
 
     setEnviando(true);
     try {
       const { error } = await supabase.from('doacoes').insert({
-        empresa_id: session.user.id,
+        doador_id: session.user.id,
         ong_id: ong.id,
         valor,
         data_doacao: dataIso,
         comprovante_url: comprovantePath,
+        dedutivel,
       });
       if (error) throw error;
-
-      const html = gerarHtmlDeclaracaoDoacao({
-        ongNome: ong.full_name,
-        ongCnpj: ong.documento || 'não informado',
-        empresaNome: profile?.full_name,
-        empresaCnpj: profile?.documento || 'não informado',
-        valor,
-        dataDoacao: dataIso,
-      });
-
-      if (Platform.OS === 'web') {
-        await Print.printAsync({ html });
-      } else {
-        const { uri } = await Print.printToFileAsync({ html });
-        const podeCompartilhar = await Sharing.isAvailableAsync();
-        if (podeCompartilhar) await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
-      }
 
       limpar();
       onSucesso?.();
@@ -104,8 +91,8 @@ export default function RegistrarDoacaoModal({ visivel, onFechar, ong, onSucesso
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.backdrop}>
         <View style={styles.card}>
           <View style={styles.header}>
-            <Text style={styles.title}>Registrar doação dedutível</Text>
-            <TouchableOpacity onPress={onFechar}><Feather name="x" size={24} color={theme.colors.textLight} /></TouchableOpacity>
+            <Text style={styles.title}>{dedutivel ? 'Registrar doação dedutível' : 'Informar doação por Pix'}</Text>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Fechar" onPress={onFechar}><Feather name="x" size={24} color={theme.colors.textLight} /></TouchableOpacity>
           </View>
           <Text style={styles.subtitle}>Para {ong?.full_name}</Text>
 
@@ -116,7 +103,7 @@ export default function RegistrarDoacaoModal({ visivel, onFechar, ong, onSucesso
             <Text style={styles.label}>Data da doação *</Text>
             <TextInput style={styles.input} placeholder="DD/MM/AAAA" value={dataTexto} onChangeText={setDataTexto} placeholderTextColor={theme.colors.textLight} />
 
-            <Text style={styles.label}>Comprovante bancário (opcional)</Text>
+            <Text style={styles.label}>Comprovante do Pix (opcional, ajuda a ONG a conferir)</Text>
             <TouchableOpacity style={styles.anexoBtn} onPress={anexarComprovante} disabled={enviandoComprovante}>
               {enviandoComprovante ? (
                 <ActivityIndicator size="small" color={theme.colors.secondary} />
@@ -127,11 +114,13 @@ export default function RegistrarDoacaoModal({ visivel, onFechar, ong, onSucesso
             </TouchableOpacity>
 
             <Text style={styles.hint}>
-              Ao confirmar, geramos a declaração de doação (modelo do art. 13 da Lei 9.249/95) pronta pra você levar à sua contabilidade.
+              {dedutivel
+                ? 'A ONG será avisada e precisa confirmar o recebimento. Só depois disso a doação entra no seu teto dedutível e a declaração (art. 13 da Lei 9.249/95) fica disponível em "Minhas doações".'
+                : 'Faça o Pix no app do seu banco e informe aqui. A ONG será avisada e confirma quando o valor chegar. O Aviva não recebe nem repassa dinheiro.'}
             </Text>
 
             <TouchableOpacity style={styles.submitBtn} onPress={confirmar} disabled={enviando}>
-              {enviando ? <ActivityIndicator color={theme.colors.background} /> : <Text style={styles.submitBtnText}>Confirmar doação</Text>}
+              {enviando ? <ActivityIndicator color={theme.colors.background} /> : <Text style={styles.submitBtnText}>{dedutivel ? 'Registrar doação' : 'Informar doação'}</Text>}
             </TouchableOpacity>
           </ScrollView>
         </View>

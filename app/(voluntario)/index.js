@@ -8,6 +8,10 @@ import Avatar from '../../components/Avatar';
 import PostsFeedList from '../../components/PostsFeedList';
 import { formatarTempoRelativo } from '../../lib/format';
 import { theme } from '../../lib/theme';
+import NotificacoesBell from '../../components/NotificacoesBell';
+import HeaderDecor from '../../components/HeaderDecor';
+import { estiloCategoria } from '../../lib/categorias';
+import { ODS } from '../../lib/ods';
 
 export default function VoluntarioHome() {
   const { fullName } = useAuth();
@@ -24,7 +28,7 @@ export default function VoluntarioHome() {
     const { data, error } = await supabase
       .from('vagas')
       .select(
-        'id, titulo, descricao, categoria, modalidade, localizacao, endereco, imagem_url, data_hora, vagas_disponiveis, created_at, profiles ( id, full_name, foto_url, verificado )'
+        'id, titulo, descricao, categoria, ods, modalidade, localizacao, endereco, imagem_url, data_hora, vagas_disponiveis, created_at, profiles ( id, full_name, foto_url, verificado )'
       )
       .eq('ativa', true)
       .order('created_at', { ascending: false });
@@ -66,9 +70,10 @@ export default function VoluntarioHome() {
           {item.imagem_url ? (
             <Image source={{ uri: item.imagem_url }} style={styles.cover} />
           ) : (
-            <View style={[styles.cover, styles.coverPlaceholder]}>
-              <Feather name="image" size={32} color={theme.colors.border} />
-              <Text style={styles.placeholderText}>Sem imagem</Text>
+            <View style={[styles.cover, styles.coverPlaceholder, { height: 132, backgroundColor: estiloCategoria(item.categoria).fundo }]}>
+              <View style={[styles.coverIcone, { backgroundColor: estiloCategoria(item.categoria).cor }]}>
+                <Feather name={estiloCategoria(item.categoria).icone} size={30} color="#FFFFFF" />
+              </View>
             </View>
           )}
         </TouchableOpacity>
@@ -94,6 +99,15 @@ export default function VoluntarioHome() {
           </View>
 
           <Text style={styles.title}>{item.titulo}</Text>
+            {(item.ods || []).length > 0 && (
+              <View style={styles.odsLinha}>
+                {item.ods.filter((n) => ODS[n]).map((n) => (
+                  <View key={n} style={[styles.odsPonto, { backgroundColor: ODS[n].cor }]} accessible accessibilityLabel={`Apoia o ODS ${n}, ${ODS[n].nome}`}>
+                    <Text style={styles.odsPontoTexto}>{n}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           <Text style={styles.description} numberOfLines={2}>{item.descricao}</Text>
 
           <View style={styles.locationRow}>
@@ -113,13 +127,12 @@ export default function VoluntarioHome() {
   return (
     <View style={styles.feed}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.welcomeText}>Olá, {fullName || 'voluntário'}!</Text>
+        <HeaderDecor />
+        <View style={{ flex: 1, paddingRight: 12 }}>
+          <Text style={styles.welcomeText} numberOfLines={1}>Olá, {fullName || 'voluntário'}!</Text>
           <Text style={styles.subWelcomeText}>Pronto para fazer a diferença hoje?</Text>
         </View>
-        <TouchableOpacity style={styles.headerIcon}>
-          <Feather name="bell" size={22} color={theme.colors.primary} />
-        </TouchableOpacity>
+        <NotificacoesBell />
       </View>
 
       <View style={styles.tabsContainer}>
@@ -171,20 +184,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20, 
-    paddingTop: 50, 
-    paddingBottom: 20, 
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border
+    paddingTop: 56, 
+    paddingBottom: 28, 
+    backgroundColor: theme.colors.primary,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
   },
-  welcomeText: { fontSize: 24, fontFamily: theme.fonts.heading, color: theme.colors.text },
-  subWelcomeText: { fontSize: 13, fontFamily: theme.fonts.body, color: theme.colors.textLight, marginTop: 2 },
+  welcomeText: { fontSize: 24, fontFamily: theme.fonts.heading, color: '#FFFFFF' },
+  subWelcomeText: { fontSize: 13, fontFamily: theme.fonts.body, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
   headerIcon: { padding: 8, backgroundColor: theme.colors.surface, borderRadius: 50 },
 
-  tabsContainer: { backgroundColor: theme.colors.background, paddingHorizontal: 16, paddingBottom: 12 },
+  tabsContainer: { backgroundColor: theme.colors.surface, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4 },
   tabsRow: { 
     flexDirection: 'row', 
-    backgroundColor: theme.colors.surface, 
+    backgroundColor: theme.colors.pill, 
     borderRadius: 100, 
     padding: 4 
   },
@@ -200,15 +214,13 @@ const styles = StyleSheet.create({
 
   card: { 
     backgroundColor: theme.colors.background, 
-    borderRadius: 20, 
+    borderRadius: 24, 
     marginBottom: 20, 
     overflow: 'hidden', 
-    borderWidth: 1, 
-    borderColor: theme.colors.border, 
-    elevation: 3, 
-    shadowColor: '#000', 
-    shadowOpacity: 0.08, 
-    shadowRadius: 12,
+    elevation: 4, 
+    shadowColor: '#0B1B2E', 
+    shadowOpacity: 0.09, 
+    shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 }
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', padding: 16 },
@@ -221,9 +233,13 @@ const styles = StyleSheet.create({
   coverPlaceholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F4F8' },
   placeholderText: { marginTop: 8, fontSize: 12, fontFamily: theme.fonts.button, color: theme.colors.textLight },
 
+  coverIcone: { width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center' },
+  odsLinha: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
+  odsPonto: { minWidth: 26, height: 26, paddingHorizontal: 6, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  odsPontoTexto: { color: '#FFFFFF', fontFamily: theme.fonts.heading, fontSize: 12 },
   cardBody: { padding: 16 },
   tagRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  categoryTag: { backgroundColor: '#E4F3EC', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6 },
+  categoryTag: { backgroundColor: '#E4F3EC', paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8 },
   categoryText: { color: theme.colors.secondary, fontFamily: theme.fonts.button, fontSize: 11, textTransform: 'uppercase' },
   spotsBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: theme.colors.surface, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 100, borderWidth: 1, borderColor: theme.colors.border },
   spotsText: { color: theme.colors.primary, fontFamily: theme.fonts.button, fontSize: 11 },

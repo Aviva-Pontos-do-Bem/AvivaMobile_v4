@@ -69,6 +69,11 @@ export default function PerfilSidebar({ visivel, onFechar, email, userId }) {
                 <Feather name="chevron-right" size={18} color={theme.colors.border} />
               </TouchableOpacity>
 
+              <TouchableOpacity style={styles.item} onPress={() => irPara('/doacoes')}>
+                <View style={styles.itemIcon}><Feather name="heart" size={18} color={theme.colors.text} /></View>
+                <Text style={styles.itemText}>Doações</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity style={styles.item} onPress={() => irPara('/sobre')}>
                 <View style={styles.itemIcon}><Feather name="info" size={18} color={theme.colors.text} /></View>
                 <Text style={styles.itemText}>Sobre o Aviva</Text>

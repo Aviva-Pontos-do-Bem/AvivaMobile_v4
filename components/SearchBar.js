@@ -17,7 +17,7 @@ export default function SearchBar({ valor, onMudar, placeholder = 'Buscar...' })
         autoCorrect={false}
       />
       {!!valor && (
-        <TouchableOpacity onPress={() => onMudar('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Limpar busca" onPress={() => onMudar('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Feather name="x-circle" size={18} color={theme.colors.textLight} />
         </TouchableOpacity>
       )}

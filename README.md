@@ -37,23 +37,34 @@ A arquitetura de negócio foi desenhada para atender três perfis, gerando uma r
 
 ---
 
-## 4. Transparência Fiscal e Métricas ESG (Business Intelligence)
-Para garantir a adesão do Setor Privado, o Aviva resolve a dor da burocracia na utilização de incentivos fiscais, operando sob três pilares analíticos:
+## 4. Transparência Fiscal e Métricas ESG
+Para garantir a adesão do Setor Privado, o Aviva reduz a burocracia na utilização de incentivos fiscais:
 
-* **Compliance e Validação Legal:** O sistema possui flags no banco de dados que categorizam ONGs com projetos aprovados em Leis de Incentivo (Lei Rouanet, FUMCAD, Pronon, etc.). Isso permite que empresas filtrem diretamente iniciativas passíveis de dedução de impostos.
-* **Rastreabilidade (Tracking):** Cada ação (seja horas doadas por um colaborador da empresa ou um aporte financeiro) é registrada em tabelas relacionais com *timestamps* rigorosos, garantindo a lisura do processo.
-* **Geração de Dashboards de Impacto:** Estruturamos a extração de dados para alimentar módulos de *Business Intelligence* na plataforma corporativa. A empresa parceira tem acesso a gráficos que consolidam indicadores (ex: Total de Horas Doadas, Distribuição por ODS, CO2 Neutralizado), podendo exportar relatórios prontos para compor auditorias e seus Relatórios de Sustentabilidade anuais.
+* **Doação dedutível (Lucro Real):** ONGs autodeclaram o cumprimento dos requisitos materiais da Lei 9.790/1999 (finalidade estatutária, sem distribuição de sobras, sem atuação político-partidária) e anexam o estatuto. Empresas no Lucro Real registram a doação, anexam o comprovante e recebem uma declaração de doação em PDF; o painel acompanha o teto dedutível de 2% do lucro operacional por exercício.
+* **Rastreabilidade:** Toda ação (horas voluntariadas por colaboradores vinculados à empresa, apoios a ONGs e doações) é registrada em tabelas relacionais com *timestamps*.
+* **Painel ESG com exportação:** A empresa acompanha ONGs apoiadas, horas de voluntariado, ações concluídas e doações dedutíveis, e exporta um relatório em PDF para compor auditorias e relatórios de sustentabilidade.
+
+* **ODS e impacto ambiental:** cada vaga indica até 3 Objetivos de Desenvolvimento Sustentável (a ONG parte de uma sugestão pela categoria). O painel e o PDF da empresa mostram horas e ações por ODS. A ONG também pode declarar, por voluntário, árvores plantadas ou quilos de resíduo reciclado. O CO₂ é estimado **só a partir de árvores** (cenário conservador de 140 kg CO₂e por árvore nativa em 20 anos, estudo Totum/ESALQ/SOS Mata Atlântica) e sempre aparece como estimativa, não como crédito de carbono; resíduos aparecem em quilos, sem conversão.
+
+> Ainda fora do escopo: marcação de projetos em leis de incentivo (Rouanet, FUMCAD, PRONON) e conversão de resíduos em CO₂.
 
 ---
 
 ## 5. Arquitetura do Sistema e Tecnologias
-O desenho de software prioriza acessibilidade, escalabilidade e leveza, operando através de uma arquitetura orientada a serviços:
 
-* **Front-end Mobile & Web:** Interfaces construídas com **React Native** (para o App do voluntário) e componentes React modernos (para a Web de ONGs/Empresas), proporcionando uma experiência imersiva e responsiva.
-* **Back-end Central:** Orquestração de rotas, lógicas de autenticação e comunicação estruturadas em **Node.js**, consumindo APIs RESTful seguras.
-* **Banco de Dados & Cloud:** Estrutura sustentada como *Backend-as-a-Service (BaaS)* utilizando a Google Cloud Platform através do **Firebase**. Empregamos o *Firestore* para a sincronização ágil de dados em tempo real e o *Firebase Auth* para segurança de identidades.
-* **Análise de Dados:** Lógicas de consultas avançadas para suporte aos relatórios ESG e ao ranqueamento da Inteligência Artificial.
+* **Front-end Mobile & Web:** **React Native + Expo (Expo Router)**, uma única base de código para Android, iOS e web.
+* **Back-end:** **Supabase** (Backend-as-a-Service): PostgreSQL com *Row Level Security*, Supabase Auth (e-mail/senha e Google), Storage para imagens e documentos fiscais e funções SQL (`SECURITY DEFINER`) para expor dados sensíveis de forma controlada. Todas as regras de acesso vivem no banco, não no cliente.
+* **Mapa e geolocalização:** OpenStreetMap (Leaflet) e `expo-location`.
+* **Relatórios:** PDFs gerados no dispositivo com `expo-print` e `expo-sharing`.
+* **Qualidade:** testes automatizados (Jest) das regras de negócio em `lib/`, executados a cada push via GitHub Actions.
 
+### Como rodar
+```bash
+npm install
+npx expo start        # --web para abrir no navegador
+npm test              # testes automatizados
+```
+As migrations SQL (`migration_*.sql`) devem ser executadas no SQL Editor do Supabase, em ordem cronológica de criação.
 
 *Acesse nossa prototipação inicial em alta fidelidade no [Figma do Projeto](https://www.figma.com/team_invite/redeem/ftTJuakpvc2KcnhCnmtMav?t=2LOvTr6cmx9lM8q3-21).*
 

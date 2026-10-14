@@ -8,8 +8,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import SafetyNotice from '../../components/SafetyNotice';
 import { parseDataHoraBR } from '../../lib/format';
 import { CATEGORIAS } from '../../lib/constants';
+import { ODS, NUMEROS_ODS, MAX_ODS_POR_VAGA, sugerirOds, alternarOds } from '../../lib/ods';
+import { TIPOS_IMPACTO } from '../../lib/impactoAmbiental';
 import { enviarImagemVaga } from '../../lib/upload';
 import { theme } from '../../lib/theme';
+import HeaderDecor from '../../components/HeaderDecor';
 
 // Só usado pra preencher o campo de texto ao abrir uma vaga existente pra
 // edição — o inverso exato de parseDataHoraBR (ISO -> "DD/MM/AAAA HH:MM").
@@ -23,6 +26,20 @@ function isoParaTextoDataHora(dataIso) {
   const hh = String(data.getHours()).padStart(2, '0');
   const min = String(data.getMinutes()).padStart(2, '0');
   return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+}
+
+function Secao({ icone, titulo, children }) {
+  return (
+    <View style={styles.secao}>
+      <View style={styles.secaoTopo}>
+        <View style={styles.secaoIcone}>
+          <Feather name={icone} size={17} color={theme.colors.primary} />
+        </View>
+        <Text style={styles.secaoTitulo}>{titulo}</Text>
+      </View>
+      {children}
+    </View>
+  );
 }
 
 export default function CriarVaga() {
@@ -40,6 +57,9 @@ export default function CriarVaga() {
   const [horasEstimadas, setHorasEstimadas] = useState('');
   const [contatoEmergencia, setContatoEmergencia] = useState('');
   const [categoria, setCategoria] = useState(CATEGORIAS[0]);
+  const [ods, setOds] = useState(() => sugerirOds(CATEGORIAS[0]));
+  const [impactoTipo, setImpactoTipo] = useState(null);
+  const [impactoQtd, setImpactoQtd] = useState('');
   const [idadeMinima, setIdadeMinima] = useState('');
   const [requisitos, setRequisitos] = useState('');
   const [oQueLevar, setOQueLevar] = useState('');
@@ -76,6 +96,9 @@ export default function CriarVaga() {
       setHorasEstimadas(data.horas_estimadas != null ? String(data.horas_estimadas) : '');
       setContatoEmergencia(data.contato_emergencia || '');
       setCategoria(data.categoria || CATEGORIAS[0]);
+      setOds(data.ods || []);
+      setImpactoTipo(data.impacto_tipo || null);
+      setImpactoQtd(data.impacto_por_voluntario != null ? String(data.impacto_por_voluntario).replace('.', ',') : '');
       setIdadeMinima(data.idade_minima ? String(data.idade_minima) : '');
       setRequisitos(data.requisitos || '');
       setOQueLevar(data.o_que_levar || '');
@@ -108,6 +131,14 @@ export default function CriarVaga() {
     const vagas = parseInt(vagasDisponiveis, 10);
     if (!vagasDisponiveis || Number.isNaN(vagas) || vagas <= 0) return avisar('Campo obrigatório', 'Informe quantas vagas estão disponíveis.');
 
+    let quantidadeImpacto = null;
+    if (impactoTipo) {
+      quantidadeImpacto = Number(impactoQtd.replace(',', '.'));
+      if (!Number.isFinite(quantidadeImpacto) || quantidadeImpacto <= 0 || quantidadeImpacto > 10000) {
+        return avisar('Impacto ambiental', 'Informe uma quantidade válida por voluntário, ou escolha "Nenhum".');
+      }
+    }
+
     let dataHoraIso = null;
     if (dataHoraTexto.trim()) {
       dataHoraIso = parseDataHoraBR(dataHoraTexto);
@@ -131,6 +162,7 @@ export default function CriarVaga() {
         categoria, idade_minima: idadeMinima ? parseInt(idadeMinima, 10) : null, requisitos: requisitos.trim() || null,
         o_que_levar: oQueLevar.trim() || null, imagem_url: imagemUrlFinal, visibilidade, modalidade,
         horas_estimadas: horasEstimadas ? parseInt(horasEstimadas, 10) : null,
+        ods, impacto_tipo: impactoTipo, impacto_por_voluntario: impactoTipo ? quantidadeImpacto : null,
       };
 
       if (emEdicao) {
@@ -183,31 +215,83 @@ export default function CriarVaga() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <HeaderDecor />
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Voltar" style={styles.headerVoltar} onPress={() => router.back()}>
+          <Feather name="arrow-left" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>{emEdicao ? 'Editar Vaga' : 'Nova Ação'}</Text>
         {emEdicao && (
-          <TouchableOpacity onPress={confirmarExclusao} disabled={excluindo} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            {excluindo ? <ActivityIndicator size="small" color={theme.colors.error} /> : <Feather name="trash-2" size={20} color={theme.colors.error} />}
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel="Excluir vaga" onPress={confirmarExclusao} disabled={excluindo} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            {excluindo ? <ActivityIndicator size="small" color={theme.colors.coral} /> : <Feather name="trash-2" size={20} color={theme.colors.coral} />}
           </TouchableOpacity>
         )}
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <SafetyNotice text="Endereço, data/hora e um contato do dia são obrigatórios para garantir a segurança e organização do evento." />
 
+        <Secao icone="target" titulo="Causa e impacto">
         <Text style={styles.label}>Categoria da Causa</Text>
         <View style={styles.categoryRow}>
           {CATEGORIAS.map((c) => (
-            <TouchableOpacity key={c} style={[styles.categoryChip, categoria === c && styles.categoryChipActive]} onPress={() => setCategoria(c)}>
+            <TouchableOpacity key={c} style={[styles.categoryChip, categoria === c && styles.categoryChipActive]} onPress={() => {
+              // Só troca os ODS sugeridos se a ONG ainda não os personalizou.
+              const semPersonalizar = ods.length === 0 || JSON.stringify(ods) === JSON.stringify(sugerirOds(categoria));
+              setCategoria(c);
+              if (semPersonalizar) setOds(sugerirOds(c));
+            }}>
               <Text style={[styles.categoryChipText, categoria === c && styles.categoryChipTextActive]}>{c}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
+        <Text style={styles.label}>ODS que essa ação apoia (até {MAX_ODS_POR_VAGA})</Text>
+        <View style={styles.categoryRow}>
+          {NUMEROS_ODS.map((n) => {
+            const ativo = ods.includes(n);
+            return (
+              <TouchableOpacity
+                key={n}
+                accessibilityRole="button"
+                accessibilityState={{ selected: ativo }}
+                accessibilityLabel={`ODS ${n}, ${ODS[n].nome}`}
+                style={[styles.odsChip, ativo && { backgroundColor: ODS[n].cor, borderColor: ODS[n].cor }]}
+                onPress={() => setOds((lista) => alternarOds(lista, n))}
+              >
+                <Text style={[styles.odsChipText, ativo && { color: '#FFFFFF' }]}>{n}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {ods.length > 0 && <Text style={styles.odsHint}>{ods.map((n) => `ODS ${n}: ${ODS[n].nome}`).join(' · ')}</Text>}
+
+        <Text style={styles.label}>Impacto ambiental (opcional)</Text>
+        <View style={styles.categoryRow}>
+          {[{ key: null, rotulo: 'Nenhum' }, ...Object.keys(TIPOS_IMPACTO).map((k) => ({ key: k, rotulo: TIPOS_IMPACTO[k].rotulo }))].map((o) => (
+            <TouchableOpacity key={String(o.key)} style={[styles.categoryChip, impactoTipo === o.key && styles.categoryChipActive]} onPress={() => setImpactoTipo(o.key)}>
+              <Text style={[styles.categoryChipText, impactoTipo === o.key && styles.categoryChipTextActive]}>{o.rotulo}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        {!!impactoTipo && (
+          <>
+            <Text style={styles.label}>{TIPOS_IMPACTO[impactoTipo].rotuloCampo} *</Text>
+            <TextInput style={styles.input} placeholder="Ex: 5" keyboardType="numeric" value={impactoQtd} onChangeText={setImpactoQtd} placeholderTextColor={theme.colors.textLight} />
+            <Text style={styles.odsHint}>Quanto cada voluntário que concluir a ação deve gerar. Alimenta o relatório ESG das empresas parceiras.</Text>
+          </>
+        )}
+
+        </Secao>
+
+        <Secao icone="edit-3" titulo="Sobre a ação">
         <Text style={styles.label}>Título da vaga *</Text>
         <TextInput style={styles.input} placeholder="Ex: Mutirão de plantio" value={titulo} onChangeText={setTitulo} placeholderTextColor={theme.colors.textLight} />
 
         <Text style={styles.label}>Descrição detalhada *</Text>
         <TextInput style={[styles.input, styles.textArea]} placeholder="Descreva a atividade em detalhes para o voluntário saber o que fará." value={descricao} onChangeText={setDescricao} multiline numberOfLines={5} placeholderTextColor={theme.colors.textLight} />
 
+        </Secao>
+
+        <Secao icone="map-pin" titulo="Quando e onde">
         <Text style={styles.label}>Modalidade</Text>
         <View style={styles.visibilityRow}>
           {[
@@ -244,6 +328,9 @@ export default function CriarVaga() {
           <View style={{ flex: 1 }} />
         </View>
 
+        </Secao>
+
+        <Secao icone="users" titulo="Quem participa">
         <View style={styles.rowGrid}>
           <View style={{ flex: 1 }}>
             <Text style={styles.label}>Contato no dia *</Text>
@@ -261,11 +348,14 @@ export default function CriarVaga() {
         <Text style={styles.label}>O que levar (opcional)</Text>
         <TextInput style={[styles.input, { height: 80 }]} placeholder="Ex: protetor solar, garrafa d'água" value={oQueLevar} onChangeText={setOQueLevar} multiline numberOfLines={3} placeholderTextColor={theme.colors.textLight} />
 
+        </Secao>
+
+        <Secao icone="image" titulo="Divulgação">
         <Text style={styles.label}>Imagem de capa (opcional)</Text>
         {imagemParaMostrar ? (
           <View style={styles.coverPreviewWrap}>
             <Image source={{ uri: imagemParaMostrar }} style={styles.coverPreview} />
-            <TouchableOpacity style={styles.coverRemoveBtn} onPress={() => { setImagemLocal(null); setImagemAtualUrl(null); }}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Remover imagem da vaga" style={styles.coverRemoveBtn} onPress={() => { setImagemLocal(null); setImagemAtualUrl(null); }}>
               <Feather name="x" size={16} color={theme.colors.background} />
             </TouchableOpacity>
           </View>
@@ -288,6 +378,8 @@ export default function CriarVaga() {
           </TouchableOpacity>
         </View>
 
+        </Secao>
+
         <TouchableOpacity style={styles.saveButton} onPress={salvar} disabled={loading}>
           {loading ? (
             <ActivityIndicator color={theme.colors.background} />
@@ -301,12 +393,17 @@ export default function CriarVaga() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flex: 1, backgroundColor: theme.colors.surface },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 16, backgroundColor: theme.colors.background, borderBottomWidth: 1, borderBottomColor: theme.colors.surface },
-  headerTitle: { fontSize: 20, fontFamily: theme.fonts.heading, color: theme.colors.text },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 26, backgroundColor: theme.colors.primary, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, overflow: 'hidden' },
+  headerVoltar: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.14)', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { flex: 1, ...theme.type.h1, fontSize: 22, color: '#FFFFFF' },
+  secao: { backgroundColor: theme.colors.background, borderRadius: 24, padding: 18, paddingTop: 16, marginBottom: 16, ...theme.shadows.card },
+  secaoTopo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  secaoIcone: { width: 34, height: 34, borderRadius: 12, backgroundColor: theme.colors.pill, justifyContent: 'center', alignItems: 'center' },
+  secaoTitulo: { ...theme.type.h3, color: theme.colors.text },
 
-  scrollContent: { padding: 20, paddingBottom: 40 },
+  scrollContent: { padding: 16, paddingBottom: 40 },
   label: { fontSize: 13, fontFamily: theme.fonts.button, color: theme.colors.textLight, marginBottom: 8, marginTop: 16 },
   input: { backgroundColor: theme.colors.surface, fontFamily: theme.fonts.body, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border, color: theme.colors.text },
   textArea: { height: 120, textAlignVertical: 'top' },
@@ -316,6 +413,9 @@ const styles = StyleSheet.create({
   categoryChip: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 100, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
   categoryChipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   categoryChipText: { color: theme.colors.textLight, fontFamily: theme.fonts.button, fontSize: 13 },
+  odsChip: { width: 42, height: 42, borderRadius: 10, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, justifyContent: 'center', alignItems: 'center' },
+  odsChipText: { color: theme.colors.textLight, fontFamily: theme.fonts.heading, fontSize: 14 },
+  odsHint: { fontFamily: theme.fonts.body, fontSize: 11.5, color: theme.colors.textLight, marginTop: 8, lineHeight: 16 },
   categoryChipTextActive: { color: theme.colors.background },
 
   coverPicker: { height: 140, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border, borderStyle: 'dashed', backgroundColor: theme.colors.surface, justifyContent: 'center', alignItems: 'center', gap: 8 },

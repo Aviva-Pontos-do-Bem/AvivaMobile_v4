@@ -13,6 +13,7 @@ import { calcularMatch } from '../../lib/matching';
 import { distanciaKm, formatarDistancia } from '../../lib/geo';
 import { CATEGORIAS } from '../../lib/constants';
 import { theme } from '../../lib/theme';
+import HeaderDecor from '../../components/HeaderDecor';
 
 const MODALIDADES = [
   { key: 'todas', label: 'Todas' },
@@ -147,6 +148,7 @@ export default function Buscar() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <HeaderDecor />
         <Text style={styles.title}>Buscar</Text>
         <Text style={styles.subtitle}>Encontre a causa perfeita para você</Text>
         <SearchBar valor={query} onMudar={setQuery} placeholder="Buscar por ONG, localização ou causa..." />
@@ -191,7 +193,7 @@ export default function Buscar() {
                 <Text style={[styles.filterChipText, raioFiltro === r.key && styles.filterChipTextActive]}>{r.label}</Text>
               </TouchableOpacity>
             ))}
-            <TouchableOpacity style={styles.clearLocationChip} onPress={desativarFiltroDistancia}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Remover filtro de distância" style={styles.clearLocationChip} onPress={desativarFiltroDistancia}>
               <Feather name="x" size={13} color={theme.colors.error} />
             </TouchableOpacity>
           </ScrollView>
@@ -253,19 +255,19 @@ export default function Buscar() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.surface },
-  header: { paddingHorizontal: 20, paddingTop: 50, paddingBottom: 20, backgroundColor: theme.colors.background, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
-  title: { fontSize: 24, fontFamily: theme.fonts.heading, color: theme.colors.text },
-  subtitle: { fontSize: 13, fontFamily: theme.fonts.body, color: theme.colors.textLight, marginTop: 2, marginBottom: 16 },
+  header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 28, backgroundColor: theme.colors.primary, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, overflow: 'hidden' },
+  title: { fontSize: 24, fontFamily: theme.fonts.heading, color: '#FFFFFF' },
+  subtitle: { fontSize: 13, fontFamily: theme.fonts.body, color: 'rgba(255,255,255,0.8)', marginTop: 2, marginBottom: 16 },
 
-  filterBar: { backgroundColor: theme.colors.background, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  filterBar: { flexGrow: 0, flexShrink: 0, backgroundColor: theme.colors.surface },
   filterBarContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  filterChip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 100, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
+  filterChip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 100, backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border },
   filterChipModalidade: { paddingVertical: 6 },
   filterChipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   filterChipText: { fontSize: 12, fontFamily: theme.fonts.button, color: theme.colors.textLight },
   filterChipTextActive: { color: theme.colors.background },
 
-  locationFilterBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: theme.colors.background, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  locationFilterBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: theme.colors.surface, paddingVertical: 10 },
   locationFilterBtnText: { fontSize: 12, fontFamily: theme.fonts.button, color: theme.colors.secondary },
   clearLocationChip: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10 },
 

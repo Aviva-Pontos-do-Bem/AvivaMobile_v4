@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { theme } from '../lib/theme';
+import { headerPadrao } from '../lib/headerPadrao';
 
 const ITENS = [
   {
@@ -31,7 +32,7 @@ const ITENS = [
 export default function Sobre() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-      <Stack.Screen options={{ headerShown: true, title: 'Sobre o Aviva' }} />
+      <Stack.Screen options={{ ...headerPadrao, title: 'Sobre o Aviva' }} />
 
       <Text style={styles.appName}>Aviva</Text>
       <Text style={styles.version}>Versão {Constants.expoConfig?.version || '1.0.0'}</Text>

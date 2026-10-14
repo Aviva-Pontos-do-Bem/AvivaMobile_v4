@@ -75,7 +75,7 @@ export default function ContaSegurancaModal({ visivel, onFechar, email }) {
         <View style={styles.card}>
           <View style={styles.header}>
             <Text style={styles.title}>Segurança da conta</Text>
-            <TouchableOpacity onPress={fecharTudo}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Fechar" onPress={fecharTudo}>
               <Feather name="x" size={24} color={theme.colors.textLight} />
             </TouchableOpacity>
           </View>

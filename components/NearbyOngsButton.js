@@ -198,7 +198,7 @@ export default function NearbyOngsButton({ label = 'Ver ONGs perto de você' }) 
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>ONGs perto de você</Text>
-            <TouchableOpacity style={styles.closeBtn} onPress={() => setAberto(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Fechar mapa de ONGs" style={styles.closeBtn} onPress={() => setAberto(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Feather name="x" size={20} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
